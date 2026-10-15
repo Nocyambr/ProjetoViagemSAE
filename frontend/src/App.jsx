@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
+import SiteShell from './components/SiteShell';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Resources from './pages/Resources';
@@ -12,9 +13,10 @@ import Authorizations from './pages/Authorizations';
 function App() {
   return (
     <BrowserRouter>
+      <SiteShell>
       <Routes>
         <Route path="*" element={<Navigate to="/home" replace />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<Home />} />
@@ -25,6 +27,7 @@ function App() {
         <Route path="/locomocoes" element={<Transports />} />
         <Route path="/autorizacoes" element={<Authorizations />} />
       </Routes>
+      </SiteShell>
     </BrowserRouter>
   );
 }

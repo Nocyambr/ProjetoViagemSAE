@@ -43,6 +43,7 @@ export default function Register() {
         </header>
 
         <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)] sm:p-8">
+          <img src="/images/laboratorio-de-curiosidades.webp" alt="Ilustração de estudantes descobrindo um laboratório de natureza dentro de um caderno" width="1536" height="1024" className="mb-6 h-40 w-full rounded-2xl object-cover" />
 
           <div className="mb-7">
             <h2 className="text-xl font-bold text-gray-900">

@@ -73,3 +73,15 @@ export function addTrip(trips, draft, storage, createId = () => crypto.randomUUI
     return { trips, draft, error: 'Não foi possível criar a viagem. Tente novamente em um navegador atualizado.' };
   }
 }
+
+export function localToday(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function filterTrips(trips, query = '', period = 'all', today = localToday()) {
+  const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const search = normalize(query.trim());
+  return sortTrips(trips).filter((trip) => normalize(trip.title).includes(search)
+    && (period !== 'upcoming' || trip.date >= today)
+    && (period !== 'past' || trip.date < today));
+}

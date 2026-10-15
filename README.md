@@ -12,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-Abra o endereço exibido pelo Vite. Na tela de login, use **Explorar demonstração** para acessar as páginas sem criar uma conta.
+Abra o endereço exibido pelo Vite. A página inicial abre diretamente. O menu permite acessar cronograma, preparação, autorizações e as demais seções. A tela de login continua disponível, sem autenticação real.
 
 ```bash
 npm test
@@ -53,7 +53,7 @@ O cronograma usa `localStorage`: não sincroniza entre usuários, navegadores ou
 
 ## Qualidade e validação
 
-- `npm test`: 12 testes de regressão para o cronograma, incluindo falhas de armazenamento, conteúdo inválido, anos bissextos, ordenação e exclusão.
+- `npm test`: 16 testes de regressão para o cronograma, incluindo falhas de armazenamento, conteúdo inválido, anos bissextos, ordenação, exclusão, filtros por período e persistência da lista de preparação.
 - `npm run build`: compilação de produção da interface.
 - `.github/workflows/ci.yml`: instalação, testes e build do frontend; validação do Composer e testes do Laravel no GitHub Actions.
 - A revisão foi validada localmente com os testes JavaScript e o build. PHP e Composer não estavam disponíveis no ambiente de revisão; a validação PHP fica no pipeline.
@@ -67,3 +67,15 @@ O cronograma usa `localStorage`: não sincroniza entre usuários, navegadores ou
 5. Ampliar testes de interface e revisar acessibilidade antes de uso operacional.
 
 Os arquivos do anexo estão distribuídos em `frontend/` e `backend/`. O `.gitignore` impede a inclusão de dependências, builds, arquivos de ambiente e bancos SQLite locais.
+
+## Versão hospedada e melhorias recentes
+
+[Abrir SESI Aventura Educativa](https://projeto-viagem-sae.artfulelm64.chatgpt.site) — acesso privado pela conta proprietária.
+
+- Identidade visual com ilustrações exclusivas em estilo de diorama de papel recortado: mundo que nasce de um caderno, laboratório de natureza e mochila de possibilidades.
+- Menu compartilhado, indicação da seção ativa, navegação por teclado e adaptação para celular.
+- Página inicial com resumo das próximas viagens e lista de preparação.
+- Cronograma com busca sem distinção de acentos, filtros por período e download de cópia JSON.
+- Lista de preparação com progresso salvo apenas no navegador.
+
+As ilustrações ficam em `frontend/public/images/`. As fotografias anteriores estão preservadas e não são usadas na interface atual. A hospedagem serve somente o frontend estático; o Laravel permanece como estrutura inicial separada.

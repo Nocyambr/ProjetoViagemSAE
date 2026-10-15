@@ -1,55 +1,24 @@
 import { useNavigate } from 'react-router-dom';
+import PreparationChecklist from '../components/PreparationChecklist';
 
 export default function Resources() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#2A2A2A] flex flex-col">
-      <header className="bg-[#2A2A2A] text-white flex justify-between items-center px-4 py-2">
-        <span className="font-bold italic bg-red-600 px-2 py-1">SESI SENAI</span>
-        <button onClick={() => navigate('/login')} className="bg-red-600 hover:bg-red-700 px-4 py-1 rounded text-sm font-bold">SAIR</button>
-      </header>
+    <div className="min-h-full bg-[#F8E9EB] flex flex-col">
 
-      <div className="flex-1 bg-[#F8E9EB] p-8">
+      <div className="flex-1 bg-[#F8E9EB] p-4 sm:p-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-red-600">Recursos</h1>
           <p className="text-sm text-red-600 mb-8">Recursos disponíveis para o programa</p>
+          <figure className="mb-6 overflow-hidden rounded-3xl bg-emerald-950 shadow-sm">
+            <img src="/images/mochila-de-possibilidades.webp" alt="Ilustração de uma mochila que se transforma em um mundo de trilhas, mapas e descobertas" width="1536" height="1024" loading="lazy" className="h-56 sm:h-72 w-full object-cover" />
+            <figcaption className="px-6 py-4 text-sm font-medium text-white">Uma mochila. Mil possibilidades de descobrir.</figcaption>
+          </figure>
 
-          <div className="bg-white rounded-3xl p-4 sm:p-10 text-center shadow-sm">
-            <h2 className="text-4xl font-bold text-red-600 mb-12">Obrigatório!</h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
-              <div className="flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-200 rounded-lg mb-2 flex items-center justify-center">📷</div>
-                <p className="font-medium text-sm">Hidratação</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-200 rounded-lg mb-2 flex items-center justify-center">🎒</div>
-                <p className="font-medium text-sm">Cuidados necessários</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-200 rounded-lg mb-2 flex items-center justify-center">📄</div>
-                <p className="font-medium text-sm">Documentação</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-24 h-24 bg-gray-200 rounded-lg mb-2 flex items-center justify-center">📱</div>
-                <p className="font-medium text-sm">Câmera/Smartphone</p>
-              </div>
-            </div>
-
-            <p className="text-lg font-medium mb-12">
-              Lembrar de usar Mochila e roupas confortáveis para atividades ao ar livre!
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-end">
-              <button onClick={() => navigate('/home')} className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg text-lg">
-                Voltar
-              </button>
-              <p className="text-xs text-gray-500 max-w-md text-right">
-                Atenção: Todos os recursos obrigatórios devem ser providenciados antes do início das atividades.
-              </p>
-            </div>
-          </div>
+          <PreparationChecklist />
+          <p className="mt-5 text-sm text-gray-600">Confirme com a escola a relação de itens e documentos de cada atividade.</p>
+          <button onClick={() => navigate('/home')} className="mt-5 rounded-xl bg-red-600 px-5 py-3 font-bold text-white">Voltar ao início</button>
         </div>
       </div>
     </div>

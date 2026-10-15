@@ -1,30 +1,32 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import PreparationChecklist from '../components/PreparationChecklist';
+import { loadTrips, filterTrips } from '../lib/trips.js';
 
 export default function Home() {
-  const navigate = useNavigate();
+  const [initial] = useState(() => loadTrips());
+  const upcoming = filterTrips(initial.trips, '', 'upcoming');
+  const next = upcoming[0];
 
   return (
-    <div className="min-h-screen bg-[#F8E9EB] text-gray-800 font-sans">
+    <div className="min-h-full bg-[#F8E9EB] text-gray-800 font-sans">
       {/* Header */}
-      <header className="bg-[#2A2A2A] text-white flex justify-between items-center px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="font-bold italic bg-red-600 px-2 py-1">SESI SENAI</span>
-        </div>
-        <button onClick={() => navigate('/login')} className="bg-red-600 hover:bg-red-700 px-4 py-1 rounded text-sm font-bold">
-          VOLTAR AO LOGIN
-        </button>
-      </header>
 
       {/* Banner Image Area */}
       <div className="w-full max-w-6xl mx-auto mt-4 px-4">
-        <div className="bg-gray-800 text-white rounded-xl h-24 flex flex-col items-center justify-center bg-cover bg-center overflow-hidden relative">
-          {/* Placeholder for banner image */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-          <div className="relative z-10 text-center">
-            <h1 className="text-3xl font-bold">P.T.S - Programa de Turismo SESI</h1>
-            <p className="text-sm">Informações sobre sua experiência e documentação</p>
+        <section className="creative-hero" aria-labelledby="aventura-title">
+          <div className="creative-hero-art"><img src="/images/mundo-de-descobertas.webp" alt="Ilustração de um mundo de aventuras que nasce de um caderno, com floresta, ônibus e observatório" width="2048" height="1024" fetchPriority="high" /></div>
+          <div className="creative-hero-copy">
+            <span className="expedition-label">Caderno de descobertas · SESI</span>
+            <h1 id="aventura-title">O mundo é nossa<br /><em>sala de aula.</em></h1>
+            <p>Da primeira pergunta à próxima descoberta: prepare-se para aprender além dos muros da escola.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to="/data-horarios" className="rounded-xl bg-[#f6c45b] px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm hover:bg-[#ffda8d]">Planejar minha aventura ↗</Link>
+              <Link to="/recursos" className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">Preparar a mochila</Link>
+            </div>
+            <p className="hero-signature">P.T.S · Programa de Turismo SESI</p>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Main Content */}
@@ -32,35 +34,15 @@ export default function Home() {
         
         {/* Left Column */}
         <div className="flex flex-col gap-6">
-          {/* User Profile Card */}
-          <div className="bg-white rounded-2xl p-6 flex flex-col items-center text-center shadow-sm">
-            <div className="w-24 h-24 bg-gray-200 rounded-full mb-3 flex items-center justify-center overflow-hidden">
-               {/* placeholder avatar */}
-               <span className="text-gray-400">Foto</span>
-            </div>
-            <h2 className="font-bold text-sm">Aluno</h2>
-            <p className="text-xs text-gray-500 mb-4">Participante</p>
-            
-            <div className="w-full bg-gray-200 text-left px-3 py-2 text-xs mb-2 flex items-center gap-2">
-               <div className="w-3 h-3 bg-red-600"></div> Nome de exemplo
-            </div>
-            <div className="w-full bg-gray-200 text-left px-3 py-2 text-xs mb-4 flex items-center gap-2">
-               <div className="w-3 h-3 bg-red-600"></div> E-mail de exemplo
-            </div>
-            <button onClick={() => navigate('/login')} className="w-full bg-red-600 text-white py-2 rounded text-sm font-bold">Voltar ao login</button>
-          </div>
-
-          {/* Proximos Passos */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-lg mb-4 text-center">Próximos Passos</h3>
-            <ul className="text-sm space-y-2">
-              <li className="flex gap-2"><span className="text-green-500">1</span> Complete seu cadastro pessoal</li>
-              <li className="flex gap-2"><span className="font-bold">2</span> Agende sua participação</li>
-              <li className="flex gap-2"><span className="font-bold">3</span> Preencha as autorizações</li>
-              <li className="flex gap-2"><span className="font-bold">4</span> Forneça informações de saúde</li>
-              <li className="flex gap-2"><span className="font-bold">5</span> Indique forma de locomoção</li>
-            </ul>
-          </div>
+          <section className="rounded-2xl bg-emerald-950 p-6 text-white shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-200">Sua próxima descoberta</p>
+            <h2 className="mt-3 text-xl font-bold">{next ? next.title : 'Vamos planejar uma viagem?'}</h2>
+            <p className="mt-3 text-sm text-emerald-100">{next ? `${next.date.split('-').reverse().join('/')} · Saída às ${next.departure}` : 'Adicione uma viagem no cronograma para organizar as próximas atividades.'}</p>
+            <p className="mt-3 text-sm">{upcoming.length} {upcoming.length === 1 ? 'viagem a partir de hoje' : 'viagens a partir de hoje'}</p>
+            <Link to="/data-horarios" className="mt-5 inline-flex rounded-xl bg-white px-4 py-3 text-sm font-bold text-emerald-950">Abrir cronograma →</Link>
+            {initial.error && <p className="mt-3 text-xs text-amber-200">Resumo indisponível: não foi possível ler as viagens salvas.</p>}
+          </section>
+          <PreparationChecklist />
         </div>
 
         {/* Right Column (2 cols width) */}
@@ -76,27 +58,27 @@ export default function Home() {
 
           {/* Sections Grid */}
           <div>
-            <h3 className="text-2xl mb-1">Seções Disponíveis</h3>
-            <p className="text-xs text-gray-500 mb-4">Acesse todas as funcionalidades do sistema</p>
+            <h3 className="text-2xl mb-1">Seu mapa de descobertas</h3>
+            <p className="text-xs text-gray-500 mb-4">Escolha a próxima parada da sua aventura.</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link to="/professores" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Professores Responsáveis
+              <Link to="/professores" className="image-section-card" style={{ '--card-image': 'url(/images/laboratorio-de-curiosidades.webp)' }}>
+                <span>Professores Responsáveis<small className="mt-1 block text-xs font-normal text-white/85">Quem acompanha a jornada</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
-              <Link to="/autorizacoes" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Autorizações
+              <Link to="/autorizacoes" className="image-section-card" style={{ '--card-image': 'url(/images/mochila-de-possibilidades.webp)' }}>
+                <span>Autorizações<small className="mt-1 block text-xs font-normal text-white/85">Documentos para conferir</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
-              <Link to="/informacoes-extras" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Informações extras
+              <Link to="/informacoes-extras" className="image-section-card" style={{ '--card-image': 'url(/images/mundo-de-descobertas.webp)' }}>
+                <span>Informações extras<small className="mt-1 block text-xs font-normal text-white/85">Descubra o programa</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
-              <Link to="/data-horarios" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Data e Hora
+              <Link to="/data-horarios" className="image-section-card" style={{ '--card-image': 'url(/images/mundo-de-descobertas.webp)' }}>
+                <span>Data e Hora<small className="mt-1 block text-xs font-normal text-white/85">Organize sua próxima parada</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
-              <Link to="/locomocoes" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Locomoções
+              <Link to="/locomocoes" className="image-section-card" style={{ '--card-image': 'url(/images/laboratorio-de-curiosidades.webp)' }}>
+                <span>Locomoções<small className="mt-1 block text-xs font-normal text-white/85">Como chegar à aventura</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
-              <Link to="/recursos" className="bg-[#FFD700] rounded-xl py-6 flex items-center justify-center font-bold text-lg shadow-sm hover:brightness-95 transition-all">
-                Recursos
+              <Link to="/recursos" className="image-section-card" style={{ '--card-image': 'url(/images/mochila-de-possibilidades.webp)' }}>
+                <span>Recursos<small className="mt-1 block text-xs font-normal text-white/85">Prepare o seu kit</small></span><span aria-hidden="true" className="ml-3 text-2xl">↗</span>
               </Link>
             </div>
           </div>

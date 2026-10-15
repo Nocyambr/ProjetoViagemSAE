@@ -10,7 +10,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F04D4A] flex flex-col items-center justify-center p-4">
+    <div className="relative isolate min-h-screen bg-emerald-950 flex flex-col items-center justify-center p-4 py-10">
+      <img src="/images/mundo-de-descobertas.webp" alt="" width="2048" height="1024" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-emerald-950/65 via-emerald-950/35 to-emerald-950/75" />
       
       <div className="text-white text-center mb-6">
         <h1 className="text-3xl font-bold tracking-widest italic">SESI</h1>
