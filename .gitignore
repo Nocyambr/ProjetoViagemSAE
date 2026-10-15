@@ -1,0 +1,13 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+# Dependencies and build artifacts
+**/node_modules/
+**/vendor/
+**/dist/
+**/.phpunit.cache/
+.DS_Store
