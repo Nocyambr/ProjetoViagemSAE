@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom';
+export default function Register(){return <main className="min-h-screen flex items-center justify-center bg-rose-50 p-6"><section className="bg-white rounded-2xl shadow p-8 max-w-md"><h1 className="text-2xl font-bold text-red-700">Criar conta</h1><p className="my-4">O cadastro ficará disponível quando a autenticação segura do servidor estiver configurada. Nenhum cadastro é criado nesta demonstração.</p><Link className="text-red-700 underline" to="/login">Voltar ao login</Link></section></main>}
