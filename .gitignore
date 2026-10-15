@@ -11,3 +11,5 @@
 **/dist/
 **/.phpunit.cache/
 .DS_Store
+**/*.sqlite
+**/*.sqlite-*

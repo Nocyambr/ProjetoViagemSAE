@@ -1,44 +1,34 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const INITIAL_TRIPS = [
-  { id: '1', title: 'Viagem 3ºB', date: '2026-05-10', departure: '07:00', arrival: '18:00' },
-  { id: '2', title: 'Viagem 2ºA', date: '2026-08-12', departure: '07:00', arrival: '18:00' },
-  { id: '3', title: 'Viagem 9ºA', date: '2025-12-11', departure: '07:00', arrival: '18:00' },
-];
-const STORAGE_KEY = 'sae:trips:v1';
-
-function loadTrips() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (Array.isArray(saved) && saved.every((trip) => typeof trip.id === 'string' && typeof trip.title === 'string' && typeof trip.date === 'string')) return saved;
-  } catch { /* Ignore invalid local browser data. */ }
-  return INITIAL_TRIPS;
-}
+import { addTrip as createTrip, loadTrips, saveTrips, sortTrips } from '../lib/trips.js';
 
 export default function Schedule() {
   const navigate = useNavigate();
-  const [trips, setTrips] = useState(loadTrips);
+  const [initial] = useState(() => loadTrips());
+  const [trips, setTrips] = useState(initial.trips);
   const [draft, setDraft] = useState({ title: '', date: '', departure: '07:00', arrival: '18:00' });
-  const [error, setError] = useState('');
-  const sortedTrips = useMemo(() => [...trips].sort((a, b) => a.date.localeCompare(b.date)), [trips]);
+  const [error, setError] = useState(initial.error);
+  const sortedTrips = useMemo(() => sortTrips(trips), [trips]);
 
   function persist(next) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setTrips(next);
-      setError('');
-    } catch {
-      setError('Não foi possível salvar no navegador. Verifique o armazenamento disponível.');
-    }
+    const saveError = saveTrips(next);
+    setError(saveError);
+    if (!saveError) setTrips(next);
   }
 
   function addTrip(event) {
     event.preventDefault();
-    if (!draft.title.trim() || !draft.date) return setError('Informe o nome e a data da viagem.');
-    if (draft.arrival <= draft.departure) return setError('A chegada deve ser posterior à saída no mesmo dia.');
-    persist([...trips, { ...draft, title: draft.title.trim(), id: crypto.randomUUID() }]);
-    setDraft({ title: '', date: '', departure: '07:00', arrival: '18:00' });
+    const result = createTrip(trips, draft);
+    setError(result.error);
+    setTrips(result.trips);
+    setDraft(result.draft);
+  }
+
+  function deleteTrip(trip) {
+    if (window.confirm(`Excluir a viagem "${trip.title}"?`)) {
+      persist(trips.filter((item) => item.id !== trip.id));
+    }
   }
 
   return (
@@ -76,12 +66,12 @@ export default function Schedule() {
           <ul className="space-y-4">
             {sortedTrips.map((trip) => (
               <li key={trip.id} className="flex items-start justify-between gap-4 border-b pb-4">
-                <div>
+                <div className="min-w-0 break-words">
                   <h3 className="font-bold text-red-700">{trip.title}</h3>
                   <p className="text-sm">{trip.date.split('-').reverse().join('/')}</p>
                   <p className="text-sm text-gray-600">Saída: {trip.departure} · Chegada: {trip.arrival}</p>
                 </div>
-                <button type="button" aria-label={`Excluir ${trip.title}`} onClick={() => persist(trips.filter((item) => item.id !== trip.id))} className="text-sm text-red-700 underline">Excluir</button>
+                <button type="button" aria-label={`Excluir ${trip.title}`} onClick={() => deleteTrip(trip)} className="text-sm text-red-700 underline">Excluir</button>
               </li>
             ))}
           </ul>
