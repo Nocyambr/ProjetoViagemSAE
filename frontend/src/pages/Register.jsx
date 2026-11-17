@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { registerAccount } from '../lib/auth.js';
+import Icon from '../components/Icon.jsx';
 
 export default function Register({ onLogin }) {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function Register({ onLogin }) {
         <form onSubmit={handleRegister} className="space-y-3.5">
           {error && (
             <p role="alert" className="flex items-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 px-3 py-2.5 text-xs font-medium text-rose-200">
-              <span aria-hidden="true">⚠</span>
+              <Icon name="alert" />
               <span>{error}</span>
             </p>
           )}
@@ -172,7 +173,9 @@ export default function Register({ onLogin }) {
             className="group mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-colors hover:bg-red-500"
           >
             <span>CRIAR CONTA</span>
-            <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+            <span className="transition-transform duration-200 group-hover:translate-x-1">
+              <Icon name="arrow-right" />
+            </span>
           </button>
         </form>
 

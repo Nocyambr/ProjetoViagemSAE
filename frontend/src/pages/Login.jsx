@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authenticate } from '../lib/auth.js';
+import Icon from '../components/Icon.jsx';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function Login({ onLogin }) {
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           {error && (
             <p role="alert" className="flex items-center justify-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 p-3 text-sm font-medium text-rose-200">
-              <span aria-hidden="true">⚠</span>
+              <Icon name="alert" />
               <span>{error}</span>
             </p>
           )}

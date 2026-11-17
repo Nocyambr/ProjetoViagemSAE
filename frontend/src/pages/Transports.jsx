@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
 import { BUS_STATUSES, statusLabel, updateTripLocation } from '../lib/trips.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
+import Icon from '../components/Icon.jsx';
 
 function formatTime(iso) {
   if (!iso) return 'Agora';
@@ -144,8 +145,12 @@ export default function Transports({ user, portal }) {
               <circle cx="48" cy="68" r="9" fill="#10b981" stroke="#0b1116" strokeWidth="3" />
               <circle cx="552" cy="68" r="9" fill="#f6c45b" stroke="#0b1116" strokeWidth="3" />
               <g transform={`translate(${busX}, 40)`}>
-                <rect x="-22" y="-14" width="44" height="24" rx="8" fill="#dc2626" stroke="#f8fafc" strokeWidth="2" />
-                <text x="0" y="3" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="bold">🚌</text>
+                <rect x="-22" y="-15" width="44" height="24" rx="6" fill="#dc2626" stroke="#f8fafc" strokeWidth="2" />
+                <rect x="-17" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
+                <rect x="-5" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
+                <rect x="7" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
+                <circle cx="-12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
+                <circle cx="12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
               </g>
               <text x="48" y="102" textAnchor="start" fill="#cbd5e1" fontSize="12" fontWeight="600">Escola SESI</text>
               <text x="552" y="102" textAnchor="end" fill="#f6c45b" fontSize="12" fontWeight="600">
@@ -174,9 +179,10 @@ export default function Transports({ user, portal }) {
                   href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-block text-xs font-semibold text-rose-400 underline hover:text-rose-300"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-rose-400 underline hover:text-rose-300"
                 >
-                  Abrir no Google Maps ↗
+                  <span>Abrir no Google Maps</span>
+                  <Icon name="arrow-up-right" className="h-3.5 w-3.5 shrink-0" />
                 </a>
               )}
             </div>

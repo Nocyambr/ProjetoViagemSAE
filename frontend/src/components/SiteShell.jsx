@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { isTeacher } from '../lib/auth.js';
+import Icon from './Icon.jsx';
 
 export default function SiteShell({ user, hasTrips, onLogout, children }) {
   const { pathname } = useLocation();
@@ -60,7 +61,7 @@ export default function SiteShell({ user, hasTrips, onLogout, children }) {
               to={path}
               className={({ isActive }) => `site-nav-link flex items-center gap-1.5${isActive ? ' is-active' : ''}${locked ? ' opacity-70' : ''}`}
             >
-              {locked && <span aria-hidden="true" className="text-xs">🔒</span>}
+              {locked && <Icon name="lock" className="h-3.5 w-3.5 shrink-0" />}
               <span>{label}</span>
             </NavLink>
           ))}

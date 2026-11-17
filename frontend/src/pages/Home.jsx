@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { isTeacher } from '../lib/auth.js';
 import { filterTrips, statusLabel } from '../lib/trips.js';
+import Icon from '../components/Icon.jsx';
 
 export default function Home({ user, portal }) {
   const teacher = isTeacher(user);
@@ -56,8 +57,9 @@ export default function Home({ user, portal }) {
             <div className="mt-6 flex flex-wrap gap-3">
               {teacher ? (
                 <>
-                  <Link to="/data-horarios" className="rounded-xl bg-[#f6c45b] px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm hover:bg-[#ffda8d]">
-                    {hasTrips ? 'Gerenciar viagens ↗' : 'Configurar viagem ↗'}
+                  <Link to="/data-horarios" className="inline-flex items-center gap-2 rounded-xl bg-[#f6c45b] px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm hover:bg-[#ffda8d]">
+                    <span>{hasTrips ? 'Gerenciar viagens' : 'Configurar viagem'}</span>
+                    <Icon name="arrow-up-right" />
                   </Link>
                   {hasTrips && (
                     <Link to="/locomocoes" className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
@@ -69,11 +71,13 @@ export default function Home({ user, portal }) {
                 <>
                   <Link
                     to={hasTrips ? '/locomocoes' : '/home'}
-                    className={`rounded-xl px-5 py-3 text-sm font-bold shadow-sm ${
-                      hasTrips ? 'bg-[#f6c45b] text-emerald-950 hover:bg-[#ffda8d]' : 'bg-slate-800/90 text-slate-300 border border-slate-600'
+                    className={`inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm ${
+                      hasTrips ? 'bg-[#f6c45b] text-emerald-950 hover:bg-[#ffda8d]' : 'border border-slate-600 bg-slate-800/90 text-slate-300'
                     }`}
                   >
-                    {hasTrips ? 'Acompanhar ônibus ↗' : '🔒 Aguardando viagem'}
+                    {!hasTrips && <Icon name="lock" />}
+                    <span>{hasTrips ? 'Acompanhar ônibus' : 'Aguardando viagem'}</span>
+                    {hasTrips && <Icon name="arrow-up-right" />}
                   </Link>
                   {hasTrips && (
                     <Link to="/fotos" className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
@@ -101,7 +105,7 @@ export default function Home({ user, portal }) {
               <div className="mt-3 space-y-1.5 text-sm text-emerald-100">
                 {activeTrip.destination && <p>Destino: {activeTrip.destination}</p>}
                 <p>{`${activeTrip.date.split('-').reverse().join('/')} · ${activeTrip.departure} – ${activeTrip.arrival}`}</p>
-                <p className="inline-block rounded-full bg-emerald-900/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-200 border border-emerald-700/60">
+                <p className="inline-block rounded-full border border-emerald-700/60 bg-emerald-900/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-200">
                   {statusLabel(activeTrip.status)}
                 </p>
               </div>
@@ -115,12 +119,14 @@ export default function Home({ user, portal }) {
 
             <div className="mt-5 flex flex-wrap gap-2">
               {teacher ? (
-                <Link to="/data-horarios" className="inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
-                  {hasTrips ? 'Abrir painel →' : 'Criar viagem →'}
+                <Link to="/data-horarios" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
+                  <span>{hasTrips ? 'Abrir painel' : 'Criar viagem'}</span>
+                  <Icon name="arrow-right" />
                 </Link>
               ) : hasTrips ? (
-                <Link to="/locomocoes" className="inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
-                  Ver ônibus →
+                <Link to="/locomocoes" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
+                  <span>Ver ônibus</span>
+                  <Icon name="arrow-right" />
                 </Link>
               ) : null}
             </div>
@@ -136,8 +142,9 @@ export default function Home({ user, portal }) {
               </div>
               <p className="mt-2 text-sm font-medium text-slate-100">{activeTrip.busLocation.label}</p>
               <p className="mt-1 text-xs text-slate-400">{activeTrip.busName}</p>
-              <Link to="/locomocoes" className="mt-3 inline-block text-xs font-semibold text-emerald-300 underline hover:text-emerald-200">
-                {teacher ? 'Atualizar localização →' : 'Abrir mapa da rota →'}
+              <Link to="/locomocoes" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 underline hover:text-emerald-200">
+                <span>{teacher ? 'Atualizar localização' : 'Abrir mapa da rota'}</span>
+                <Icon name="arrow-right" className="h-3.5 w-3.5 shrink-0" />
               </Link>
             </section>
           )}
@@ -157,12 +164,13 @@ export default function Home({ user, portal }) {
                   <span>
                     {card.title}
                     {card.locked && (
-                      <small className="mt-1 block text-xs font-normal text-amber-200">
-                        🔒 Aguardando viagem
+                      <small className="mt-1 flex items-center gap-1.5 text-xs font-normal text-amber-200">
+                        <Icon name="lock" className="h-3.5 w-3.5 shrink-0" />
+                        <span>Aguardando viagem</span>
                       </small>
                     )}
                   </span>
-                  <span aria-hidden="true" className="ml-3 text-2xl">{card.locked ? '🔒' : '↗'}</span>
+                  <Icon name={card.locked ? 'lock' : 'arrow-up-right'} className="ml-3 h-6 w-6 shrink-0" />
                 </Link>
               ))}
             </div>
