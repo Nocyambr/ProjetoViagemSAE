@@ -61,8 +61,9 @@ class TripController extends Controller
             'departure' => $data['departure'],
             'arrival' => $data['arrival'],
             'bus_name' => trim((string) ($data['busName'] ?? '')) ?: 'Ônibus fretado',
-            'teacher_name' => trim((string) ($data['teacherName'] ?? '')) ?: 'Professor responsável',
+            'teacher_name' => trim((string) ($data['teacherName'] ?? '')) ?: 'Prof. Carlos Eduardo',
             'teacher_contact' => trim((string) ($data['teacherContact'] ?? '')),
+            'teacher_photo' => trim((string) ($data['teacherPhoto'] ?? '')) ?: '/images/teachers/prof-carlos.jpg',
             'status' => 'planned',
             'started_at' => null,
             'location_label' => $origin['label'],
@@ -91,8 +92,9 @@ class TripController extends Controller
             'departure' => $data['departure'],
             'arrival' => $data['arrival'],
             'bus_name' => trim((string) ($data['busName'] ?? '')) ?: 'Ônibus fretado',
-            'teacher_name' => trim((string) ($data['teacherName'] ?? '')) ?: 'Professor responsável',
+            'teacher_name' => trim((string) ($data['teacherName'] ?? '')) ?: 'Prof. Carlos Eduardo',
             'teacher_contact' => trim((string) ($data['teacherContact'] ?? '')),
+            'teacher_photo' => trim((string) ($data['teacherPhoto'] ?? '')) ?: $trip->teacher_photo,
         ]);
 
         return response()->json(['trip' => $trip->fresh()->toApiArray()]);
@@ -217,6 +219,7 @@ class TripController extends Controller
             'busName' => ['nullable', 'string', 'max:100'],
             'teacherName' => ['nullable', 'string', 'max:100'],
             'teacherContact' => ['nullable', 'string', 'max:100'],
+            'teacherPhoto' => ['nullable', 'string', 'max:255'],
         ], [
             'arrival.after' => 'A chegada deve ser posterior à saída no mesmo dia.',
         ]);

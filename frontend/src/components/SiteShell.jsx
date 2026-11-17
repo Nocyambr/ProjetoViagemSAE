@@ -41,8 +41,13 @@ export default function SiteShell({ user, hasTrips, onLogout, children }) {
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             {user && (
-              <span className="rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                {user.username} · {teacher ? 'Professor' : 'Aluno / Pais'}
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/80 py-1 pl-1.5 pr-3 text-xs font-semibold text-slate-200">
+                <img
+                  src={teacher ? '/images/teachers/prof-carlos.jpg' : '/images/sesi-excursao.jpg'}
+                  alt={user.name}
+                  className="h-6 w-6 rounded-full border border-slate-600 object-cover"
+                />
+                <span>{user.username} · {teacher ? 'Professor' : 'Aluno / Pais'}</span>
               </span>
             )}
             <button

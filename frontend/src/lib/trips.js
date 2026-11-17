@@ -1,3 +1,5 @@
+import { resolveTeacherPhoto, TEACHER_DIRECTORY } from './teachers.js';
+
 export const SESI_CERQUILHO = {
   name: 'SESI Cerquilho - SP',
   unit: 'CE 428',
@@ -52,6 +54,7 @@ export function normalizeTripFields(trip) {
   const busName = typeof trip.busName === 'string' ? trip.busName.trim() : '';
   const teacherName = typeof trip.teacherName === 'string' ? trip.teacherName.trim() : '';
   const teacherContact = typeof trip.teacherContact === 'string' ? trip.teacherContact.trim() : '';
+  const teacherPhoto = resolveTeacherPhoto(teacherName || TEACHER_DIRECTORY[0].name, trip.teacherPhoto);
   const status = BUS_STATUSES.some((s) => s.value === trip.status) ? trip.status : 'planned';
   const startedAt = typeof trip.startedAt === 'string' && trip.startedAt ? trip.startedAt : null;
   const started = Boolean(trip.started || startedAt !== null || status !== 'planned');
@@ -67,8 +70,9 @@ export function normalizeTripFields(trip) {
     departure: trip.departure,
     arrival: trip.arrival,
     busName: busName || 'Ônibus fretado',
-    teacherName: teacherName || 'Professor responsável',
+    teacherName: teacherName || TEACHER_DIRECTORY[0].name,
     teacherContact,
+    teacherPhoto,
     status,
     started,
     startedAt,
@@ -156,8 +160,9 @@ export const EMPTY_DRAFT = {
   departure: '07:00',
   arrival: '18:00',
   busName: '',
-  teacherName: '',
-  teacherContact: '',
+  teacherName: TEACHER_DIRECTORY[0].name,
+  teacherContact: TEACHER_DIRECTORY[0].contact,
+  teacherPhoto: TEACHER_DIRECTORY[0].photo,
 };
 
 /**

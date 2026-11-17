@@ -14,6 +14,7 @@ import {
   startTripApi,
   updateTripApi,
 } from '../lib/api.js';
+import { resolveTeacherPhoto, TEACHER_DIRECTORY } from '../lib/teachers.js';
 import { removePhotosByTrip } from '../lib/photos.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
 import Icon from '../components/Icon.jsx';
@@ -107,8 +108,9 @@ export default function Schedule({ user, portal }) {
       departure: trip.departure,
       arrival: trip.arrival,
       busName: trip.busName || '',
-      teacherName: trip.teacherName || '',
-      teacherContact: trip.teacherContact || '',
+      teacherName: trip.teacherName || TEACHER_DIRECTORY[0].name,
+      teacherContact: trip.teacherContact || TEACHER_DIRECTORY[0].contact,
+      teacherPhoto: resolveTeacherPhoto(trip.teacherName, trip.teacherPhoto),
     });
     setError('');
     setNotice('');
@@ -231,7 +233,7 @@ export default function Schedule({ user, portal }) {
                 </label>
               </div>
 
-              <label className="text-sm font-medium text-slate-200">
+              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
                 Ônibus / Transporte
                 <input
                   className={inputClass}
@@ -242,27 +244,41 @@ export default function Schedule({ user, portal }) {
                 />
               </label>
 
-              <label className="text-sm font-medium text-slate-200">
-                Professor responsável
-                <input
-                  className={inputClass}
-                  maxLength={80}
-                  value={draft.teacherName}
-                  onChange={(e) => setDraft({ ...draft, teacherName: e.target.value })}
-                  placeholder="Ex.: Prof. Carlos"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
-                Contato do responsável
-                <input
-                  className={inputClass}
-                  maxLength={80}
-                  value={draft.teacherContact}
-                  onChange={(e) => setDraft({ ...draft, teacherContact: e.target.value })}
-                  placeholder="Ex.: (11) 99999-0000 ou e-mail"
-                />
-              </label>
+              <div className="sm:col-span-2">
+                <p className="mb-2 text-sm font-medium text-slate-200">Professor responsável</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {TEACHER_DIRECTORY.map((profile) => {
+                    const selected = draft.teacherName === profile.name;
+                    return (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            teacherName: profile.name,
+                            teacherContact: profile.contact,
+                            teacherPhoto: profile.photo,
+                          })
+                        }
+                        className={`flex flex-col items-center rounded-2xl border p-3 text-center transition-colors ${
+                          selected
+                            ? 'border-emerald-400 bg-emerald-950/60 text-white'
+                            : 'border-slate-700 bg-[#0b1116] text-slate-300 hover:border-slate-500'
+                        }`}
+                      >
+                        <img
+                          src={profile.photo}
+                          alt={profile.name}
+                          className="h-16 w-16 rounded-full border border-slate-600 object-cover"
+                        />
+                        <span className="mt-2 text-xs font-bold leading-tight">{profile.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {error && <p role="alert" className="text-rose-300 sm:col-span-2">{error}</p>}
 
@@ -331,6 +347,7 @@ export default function Schedule({ user, portal }) {
           <ul className="space-y-4">
             {sortedTrips.map((trip) => {
               const inspected = inspectedLocations[trip.id];
+              const teacherPhoto = resolveTeacherPhoto(trip.teacherName, trip.teacherPhoto);
               return (
                 <li key={trip.id} className="border-b border-slate-800 pb-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -355,9 +372,10 @@ export default function Schedule({ user, portal }) {
                       <p className="mt-1 text-sm text-slate-300">
                         {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
                       </p>
-                      <p className="text-xs text-slate-400">
-                        {trip.busName} · {trip.teacherName}
-                      </p>
+                      <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
+                        <img src={teacherPhoto} alt={trip.teacherName} className="h-6 w-6 rounded-full border border-slate-600 object-cover" />
+                        <span>{trip.teacherName} · {trip.busName}</span>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
