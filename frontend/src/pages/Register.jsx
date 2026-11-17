@@ -1,10 +1,14 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { registerAccount } from '../lib/auth.js';
 
-export default function Register() {
-
+export default function Register({ onLogin }) {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const handleRegister = (e) => {
@@ -15,172 +19,172 @@ export default function Register() {
       return;
     }
 
-    setError('O cadastro ainda não está disponível: é necessário conectar o formulário à API de usuários.');
+    const result = registerAccount({ name, username, password });
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setError('');
+    onLogin?.(result.account);
+    navigate('/home', { replace: true });
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f8f9fc] px-4 py-8 flex items-center justify-center">
+    <main className="relative isolate flex min-h-dvh items-center justify-center overflow-x-clip bg-[#0b1116] p-3 text-slate-100 sm:p-6">
+      <img
+        src="/images/laboratorio-de-curiosidades.webp"
+        alt=""
+        width="1536"
+        height="1024"
+        fetchPriority="high"
+        className="absolute inset-0 -z-20 h-full w-full object-cover opacity-30"
+      />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1116]/80 via-[#0b1116]/75 to-[#0b1116]/95" />
 
-      <div className="absolute -top-32 -left-32 h-80 w-80 rounded-full bg-[#F04D4A]/10 blur-3xl" />
-      <div className="absolute -bottom-40 -right-32 h-96 w-96 rounded-full bg-[#F04D4A]/10 blur-3xl" />
-
-      <div className="relative z-10 w-full max-w-md">
-
-        <header className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F04D4A] shadow-lg shadow-red-500/20">
-            <span className="text-xl font-black tracking-tight text-white">
-              S.A.E
-            </span>
+      <section className="w-full max-w-lg rounded-3xl border border-slate-700/80 bg-[#131d24]/95 p-5 shadow-2xl backdrop-blur-md sm:p-7">
+        <header className="mb-4 flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 shadow-md shadow-red-950/50">
+            <span className="text-sm font-black tracking-tight text-white">S.A.E</span>
           </div>
-
-          <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">
-            SESI Aventura Educativa
-          </h1>
-
-          <p className="mt-1 text-sm text-gray-500">
-            Conheça o formulário de cadastro.
-          </p>
+          <div>
+            <h1 className="text-[clamp(1.125rem,1rem+0.6vw,1.375rem)] font-bold leading-tight text-slate-100">
+              Criar conta
+            </h1>
+            <p className="text-xs text-slate-400">SESI Aventura Educativa</p>
+          </div>
         </header>
 
-        <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)] sm:p-8">
-          <img src="/images/laboratorio-de-curiosidades.webp" alt="Ilustração de estudantes descobrindo um laboratório de natureza dentro de um caderno" width="1536" height="1024" className="mb-6 h-40 w-full rounded-2xl object-cover" />
-
-          <div className="mb-7">
-            <h2 className="text-xl font-bold text-gray-900">
-              Criar sua conta
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              Demonstração: o cadastro ainda está indisponível. Não informe dados reais.
+        <form onSubmit={handleRegister} className="space-y-3.5">
+          {error && (
+            <p role="alert" className="flex items-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 px-3 py-2.5 text-xs font-medium text-rose-200">
+              <span aria-hidden="true">⚠</span>
+              <span>{error}</span>
             </p>
+          )}
+
+          <div>
+            <label htmlFor="name" className="mb-1 block text-sm font-semibold text-slate-200">
+              Nome completo
+            </label>
+            <input
+              id="name"
+              name="name"
+              autoComplete="name"
+              enterKeyHint="next"
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError('');
+              }}
+              placeholder="Digite seu nome completo"
+              required
+              className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+            />
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-5">
+          <div>
+            <label htmlFor="username" className="mb-1 block text-sm font-semibold text-slate-200">
+              Usuário ou e-mail
+            </label>
+            <input
+              id="username"
+              name="username"
+              autoComplete="username"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="none"
+              enterKeyHint="next"
+              type="text"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (error) setError('');
+              }}
+              placeholder="Ex.: aluno.maria ou maria@sesi.br"
+              required
+              className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+            />
+          </div>
 
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="name"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                Nome completo
+              <label htmlFor="password" className="mb-1 block text-sm font-semibold text-slate-200">
+                Senha <span className="text-xs font-normal text-slate-400">(mín. 8)</span>
               </label>
-
-              <input
-                id="name"
-                name="name"
-                autoComplete="name"
-                type="text"
-                placeholder="Digite seu nome completo"
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#F04D4A] focus:bg-white focus:ring-4 focus:ring-[#F04D4A]/10"
-              />
+              <div className="relative flex items-center">
+                <input
+                  id="password"
+                  name="password"
+                  autoComplete="new-password"
+                  enterKeyHint="next"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Crie uma senha"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  required
+                  minLength={8}
+                  className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] py-2.5 pl-3.5 pr-16 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+                />
+                <button
+                  type="button"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? 'Ocultar senhas' : 'Mostrar senhas'}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                E-mail
-              </label>
-
-              <input
-                id="email"
-                name="email"
-                autoComplete="email"
-                type="email"
-                placeholder="Digite seu e-mail"
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#F04D4A] focus:bg-white focus:ring-4 focus:ring-[#F04D4A]/10"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                Senha
-              </label>
-
-              <input
-                id="password"
-                name="password"
-                autoComplete="new-password"
-                type="password"
-                placeholder="Crie uma senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#F04D4A] focus:bg-white focus:ring-4 focus:ring-[#F04D4A]/10"
-              />
-
-              <p className="mt-1.5 text-xs text-gray-400">
-                Mínimo de 8 caracteres.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
+              <label htmlFor="confirmPassword" className="mb-1 block text-sm font-semibold text-slate-200">
                 Confirmar senha
               </label>
-
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 autoComplete="new-password"
-                type="password"
-                placeholder="Digite a senha novamente"
+                enterKeyHint="done"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Repita a senha"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (error) setError('');
+                }}
+                aria-invalid={error ? 'true' : undefined}
                 required
-                className={`w-full rounded-xl border bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:bg-white focus:ring-4 ${
-                  error
-                    ? 'border-red-400 focus:border-red-400 focus:ring-red-400/10'
-                    : 'border-gray-200 focus:border-[#F04D4A] focus:ring-[#F04D4A]/10'
+                className={`min-h-12 w-full rounded-xl border bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 ${
+                  error ? 'border-rose-400 focus:border-rose-400' : 'border-slate-500 focus:border-emerald-400'
                 }`}
               />
-
-              {error && (
-                <p role="alert" className="mt-2 text-xs font-medium text-red-500">
-                  {error}
-                </p>
-              )}
             </div>
-
-            <button
-              type="submit"
-              className="group mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#F04D4A] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:-translate-y-0.5 hover:bg-[#df403d] hover:shadow-xl hover:shadow-red-500/25 active:translate-y-0"
-            >
-              <span>CRIAR CONTA</span>
-
-              <span className="transition-transform duration-200 group-hover:translate-x-1">
-                →
-              </span>
-            </button>
-          </form>
-
-          <div className="mt-7 border-t border-gray-100 pt-6 text-center">
-            <p className="text-sm text-gray-500">
-              Já possui uma conta?{' '}
-              <Link
-                to="/login"
-                className="font-bold text-[#F04D4A] transition-colors hover:text-[#c93633]"
-              >
-                Entrar
-              </Link>
-            </p>
           </div>
-        </section>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} SESI Aventura Educativa
-        </p>
-      </div>
+          <button
+            type="submit"
+            className="group mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition-colors hover:bg-red-500"
+          >
+            <span>CRIAR CONTA</span>
+            <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+          </button>
+        </form>
+
+        <div className="mt-4 border-t border-slate-800 pt-4 text-center">
+          <p className="text-sm text-slate-400">
+            Já possui uma conta?{' '}
+            <Link to="/login" className="font-bold text-rose-400 transition-colors hover:text-rose-300">
+              Entrar
+            </Link>
+          </p>
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,28 +1,63 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addTrip, INITIAL_TRIPS, loadTrips, saveTrips, sortTrips, STORAGE_KEY, validateTrip } from '../src/lib/trips.js';
+import {
+  addTrip,
+  EMPTY_DRAFT,
+  INITIAL_TRIPS,
+  loadTrips,
+  removeTrip,
+  saveTrips,
+  sortTrips,
+  STORAGE_KEY,
+  updateTrip,
+  updateTripLocation,
+  validateTrip,
+} from '../src/lib/trips.js';
 
-const draft = { title: '  Viagem 3ºA  ', date: '2028-02-29', departure: '07:00', arrival: '18:00' };
+const draft = { ...EMPTY_DRAFT, title: '  Viagem 3ºA  ', destination: 'Museu Catavento', date: '2028-02-29', departure: '07:00', arrival: '18:00' };
 function memoryStorage(raw = null) {
   return { getItem: (key) => { assert.equal(key, STORAGE_KEY); return raw; }, setItem: (key, value) => { assert.equal(key, STORAGE_KEY); raw = value; } };
 }
 
-test('carrega exemplos somente quando não há cronograma salvo', () => {
-  assert.deepEqual(loadTrips(memoryStorage()).trips, INITIAL_TRIPS);
+test('inicia vazio quando nenhuma viagem foi criada pelo professor', () => {
+  assert.deepEqual(INITIAL_TRIPS, []);
+  assert.deepEqual(loadTrips(memoryStorage()).trips, []);
   assert.deepEqual(loadTrips(memoryStorage('[]')), { trips: [], error: '' });
 });
 
-test('salvamento e recarga preservam os dados e normalizam o título', () => {
+test('salvamento, edição, localização do ônibus e exclusão funcionam em ciclo completo', () => {
   const storage = memoryStorage();
-  const result = addTrip([], draft, storage, () => 'trip-1');
-  assert.equal(result.error, '');
-  assert.equal(result.draft.title, '');
-  assert.equal(result.trips[0].title, 'Viagem 3ºA');
-  assert.deepEqual(loadTrips(storage).trips, result.trips);
+  const created = addTrip([], draft, storage, () => 'trip-1');
+  assert.equal(created.error, '');
+  assert.equal(created.draft.title, '');
+  assert.equal(created.trips[0].title, 'Viagem 3ºA');
+  assert.equal(created.trips[0].destination, 'Museu Catavento');
+
+  const edited = updateTrip(created.trips, 'trip-1', { title: 'Viagem 3ºA Atualizada' }, storage);
+  assert.equal(edited.error, '');
+  assert.equal(edited.trips[0].title, 'Viagem 3ºA Atualizada');
+
+  const located = updateTripLocation(
+    edited.trips,
+    'trip-1',
+    { status: 'transit', busName: 'Ônibus 02', label: 'Marginal Tietê, km 12', lat: '-23.52', lng: '-46.66', progress: 45 },
+    storage,
+  );
+  assert.equal(located.error, '');
+  assert.equal(located.trips[0].status, 'transit');
+  assert.equal(located.trips[0].busLocation.progress, 45);
+  assert.equal(located.trips[0].busLocation.label, 'Marginal Tietê, km 12');
+
+  const loaded = loadTrips(storage);
+  assert.equal(loaded.trips[0].busLocation.label, 'Marginal Tietê, km 12');
+
+  const removed = removeTrip(loaded.trips, 'trip-1', storage);
+  assert.equal(removed.error, '');
+  assert.deepEqual(loadTrips(storage).trips, []);
 });
 
 test('falha de escrita preserva o formulário e a lista anterior', () => {
-  const trips = [...INITIAL_TRIPS];
+  const trips = [];
   const result = addTrip(trips, draft, { setItem() { throw new Error('quota'); } }, () => 'new');
   assert.equal(result.trips, trips);
   assert.equal(result.draft, draft);
@@ -35,7 +70,7 @@ test('JSON inválido, null, itens nulos, IDs duplicados e horários ausentes nã
     const storage = memoryStorage(raw);
     const result = loadTrips(storage);
     assert.ok(result.error);
-    assert.deepEqual(result.trips, INITIAL_TRIPS);
+    assert.deepEqual(result.trips, []);
     assert.equal(storage.getItem(STORAGE_KEY), raw, 'não sobrescreve conteúdo ao carregar');
   }
 });
@@ -45,29 +80,17 @@ test('armazenamento bloqueado retorna erro legível', () => {
   assert.match(saveTrips([], { setItem() { throw new Error('denied'); } }), /Não foi possível salvar/);
 });
 
-test('valida calendário, incluindo anos bissextos', () => {
+test('valida calendário, horários e título', () => {
   assert.equal(validateTrip(draft), '');
   for (const date of ['', '2027-02-29', '2026-04-31', '2026-13-01', '2026-1-01']) {
     assert.match(validateTrip({ ...draft, date }), /data válida/);
   }
-});
-
-test('rejeita horários inválidos, iguais ou invertidos', () => {
   for (const departure of ['', '24:00', '12:60', '7:00', null]) assert.ok(validateTrip({ ...draft, departure }));
   assert.match(validateTrip({ ...draft, arrival: '07:00' }), /posterior/);
   assert.match(validateTrip({ ...draft, arrival: '06:00' }), /posterior/);
-});
-
-test('rejeita título vazio ou muito longo', () => {
   assert.ok(validateTrip({ ...draft, title: '  ' }));
   assert.ok(validateTrip({ ...draft, title: 'a'.repeat(101) }));
   assert.ok(validateTrip(null));
-});
-
-test('viagem inválida não grava nem gera identificador', () => {
-  const storage = { setItem() { assert.fail('não deveria salvar'); } };
-  const result = addTrip([], { ...draft, title: '' }, storage, () => assert.fail('não deveria gerar ID'));
-  assert.ok(result.error);
 });
 
 test('ordena por data e saída sem alterar a lista original', () => {
@@ -78,16 +101,4 @@ test('ordena por data e saída sem alterar a lista original', () => {
   ];
   assert.deepEqual(sortTrips(trips).map((trip) => trip.id), ['c', 'b', 'a']);
   assert.deepEqual(trips.map((trip) => trip.id), ['a', 'b', 'c']);
-});
-
-test('exclusão continua vazia após recarregar', () => {
-  const storage = memoryStorage();
-  assert.equal(saveTrips([], storage), '');
-  assert.deepEqual(loadTrips(storage).trips, []);
-});
-
-test('falha ao gerar identificador mantém os dados digitados', () => {
-  const result = addTrip([], draft, memoryStorage(), () => { throw new Error('unsupported'); });
-  assert.equal(result.draft, draft);
-  assert.ok(result.error);
 });

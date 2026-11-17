@@ -1,42 +1,280 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { isTeacher } from '../lib/auth.js';
+import { BUS_STATUSES, statusLabel, updateTripLocation } from '../lib/trips.js';
+import TripRequiredGate from '../components/TripRequiredGate.jsx';
 
-export default function Transports() {
-  const navigate = useNavigate();
+function formatTime(iso) {
+  if (!iso) return 'Agora';
+  try {
+    return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
+export default function Transports({ user, portal }) {
+  const teacher = isTeacher(user);
+  const { trips } = portal;
+
+  const [selectedId, setSelectedId] = useState(() => trips[0]?.id ?? '');
+  const activeTrip = trips.find((t) => t.id === selectedId) ?? trips[0] ?? null;
+
+  const [status, setStatus] = useState(activeTrip?.status ?? 'planned');
+  const [busName, setBusName] = useState(activeTrip?.busName ?? '');
+  const [label, setLabel] = useState(activeTrip?.busLocation?.label ?? '');
+  const [lat, setLat] = useState(activeTrip?.busLocation?.lat ?? '');
+  const [lng, setLng] = useState(activeTrip?.busLocation?.lng ?? '');
+  const [progress, setProgress] = useState(activeTrip?.busLocation?.progress ?? 0);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!activeTrip) return;
+    setSelectedId(activeTrip.id);
+    setStatus(activeTrip.status);
+    setBusName(activeTrip.busName);
+    setLabel(activeTrip.busLocation.label);
+    setLat(activeTrip.busLocation.lat);
+    setLng(activeTrip.busLocation.lng);
+    setProgress(activeTrip.busLocation.progress);
+  }, [activeTrip?.id, activeTrip?.busLocation?.updatedAt]);
+
+  if (!trips.length) {
+    return <TripRequiredGate isTeacher={teacher} title="Localização do Ônibus" />;
+  }
+
+  function handleSave(e) {
+    e.preventDefault();
+    if (!teacher || !activeTrip) return;
+    const res = updateTripLocation(trips, activeTrip.id, { status, busName, label, lat, lng, progress });
+    setError(res.error);
+    setNotice(res.error ? '' : 'Localização do ônibus atualizada.');
+  }
+
+  function captureGps() {
+    if (!navigator.geolocation) {
+      setError('Geolocalização não suportada neste navegador.');
+      return;
+    }
+    setGpsLoading(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const nextLat = pos.coords.latitude.toFixed(6);
+        const nextLng = pos.coords.longitude.toFixed(6);
+        setLat(nextLat);
+        setLng(nextLng);
+        if (!label.trim() || label.startsWith('Ponto de partida')) {
+          setLabel(`GPS capturado (${nextLat}, ${nextLng})`);
+        }
+        setGpsLoading(false);
+        setNotice('Coordenadas GPS capturadas. Clique em salvar para publicar.');
+      },
+      () => {
+        setGpsLoading(false);
+        setError('Não foi possível obter o GPS do dispositivo. Você pode preencher o endereço manualmente.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }
+
+  const hasCoords = Boolean(activeTrip?.busLocation.lat && activeTrip?.busLocation.lng);
+  const mapUrl = hasCoords
+    ? `https://www.google.com/maps?q=${encodeURIComponent(`${activeTrip.busLocation.lat},${activeTrip.busLocation.lng}`)}`
+    : activeTrip?.busLocation.label
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeTrip.busLocation.label)}`
+      : '';
+
+  const busX = 48 + (activeTrip.busLocation.progress / 100) * 504;
 
   return (
-    <div className="min-h-full bg-[#F8E9EB] flex flex-col">
-
-      <div className="flex-1 bg-[#F8E9EB] p-4 sm:p-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-red-600">Locomoções</h1>
-          <p className="text-sm text-red-600 mb-8">Exemplos de transporte — disponibilidade não confirmada</p>
-
-          <div className="bg-white rounded-3xl p-8 shadow-sm">
-            <h4 className="text-xs text-red-600 font-bold mb-4">Opções de Transporte:</h4>
-
-            <div className="bg-gray-100 rounded-lg p-4 mb-4 border-l-4 border-blue-500">
-              <p className="text-xs mb-1">Transporte Privado 3ºB</p>
-              <h5 className="font-bold text-sm mb-1">Ônibus Calvip</h5>
-              <p className="text-xs text-gray-600">A confirmar</p>
-            </div>
-
-            <div className="bg-gray-100 rounded-lg p-4 mb-4">
-              <p className="text-xs mb-1">Transporte Privado 2ºA</p>
-              <h5 className="font-bold text-sm mb-1">Ônibus Calvip</h5>
-              <p className="text-xs text-gray-600">A confirmar</p>
-            </div>
-
-            <div className="bg-gray-100 rounded-lg p-4 mb-4">
-              <p className="text-xs mb-1">Transporte Privado 9ºA</p>
-              <h5 className="font-bold text-sm mb-1">Ônibus Calvip</h5>
-              <p className="text-xs text-gray-600">A confirmar</p>
-            </div>
-
-            <button onClick={() => navigate('/home')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">
-              Voltar
-            </button>
-          </div>
+    <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold text-rose-400">Localização do Ônibus</h1>
+          {trips.length > 1 && (
+            <label className="text-sm font-medium text-slate-300">
+              <span className="mr-2">Viagem:</span>
+              <select
+                value={activeTrip.id}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="rounded-xl border border-slate-500 bg-[#131d24] px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+              >
+                {trips.map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
+
+        {notice && (
+          <p role="status" className="rounded-xl border border-emerald-700 bg-emerald-950/70 p-3 text-sm text-emerald-200">
+            {notice}
+          </p>
+        )}
+
+        <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <span className="inline-block rounded-full border border-emerald-600/60 bg-emerald-950/80 px-3 py-1 text-xs font-bold text-emerald-300">
+                {statusLabel(activeTrip.status)}
+              </span>
+              <h2 className="mt-2 text-xl font-bold text-slate-100">{activeTrip.title}</h2>
+              <p className="text-sm text-slate-400">{activeTrip.busName}</p>
+            </div>
+            <div className="text-right text-xs text-slate-400">
+              <p>Atualizado em</p>
+              <p className="font-semibold text-slate-200">{formatTime(activeTrip.busLocation.updatedAt)}</p>
+            </div>
+          </div>
+
+          {/* Self-contained dark SVG route map */}
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4">
+            <svg viewBox="0 0 600 130" className="w-full h-auto" role="img" aria-label={`Progresso do trajeto: ${activeTrip.busLocation.progress}%`}>
+              <defs>
+                <linearGradient id="routeGrad" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="552" y2="0">
+                  <stop offset="0%" stopColor="#10b981" />
+                  <stop offset="100%" stopColor="#f6c45b" />
+                </linearGradient>
+              </defs>
+              <line x1="48" y1="68" x2="552" y2="68" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+              <line x1="48" y1="68" x2={busX} y2="68" stroke="url(#routeGrad)" strokeWidth="8" strokeLinecap="round" />
+              <circle cx="48" cy="68" r="9" fill="#10b981" stroke="#0b1116" strokeWidth="3" />
+              <circle cx="552" cy="68" r="9" fill="#f6c45b" stroke="#0b1116" strokeWidth="3" />
+              <g transform={`translate(${busX}, 40)`}>
+                <rect x="-22" y="-14" width="44" height="24" rx="8" fill="#dc2626" stroke="#f8fafc" strokeWidth="2" />
+                <text x="0" y="3" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="bold">🚌</text>
+              </g>
+              <text x="48" y="102" textAnchor="start" fill="#cbd5e1" fontSize="12" fontWeight="600">Escola SESI</text>
+              <text x="552" y="102" textAnchor="end" fill="#f6c45b" fontSize="12" fontWeight="600">
+                {activeTrip.destination || 'Destino'}
+              </text>
+            </svg>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Localização atual</p>
+              <p className="mt-1 text-base font-bold text-slate-100">{activeTrip.busLocation.label}</p>
+              {hasCoords && (
+                <p className="mt-1 text-xs text-slate-400">
+                  Coordenadas: {activeTrip.busLocation.lat}, {activeTrip.busLocation.lng}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Percurso concluído</p>
+                <p className="mt-1 text-2xl font-extrabold text-emerald-300">{activeTrip.busLocation.progress}%</p>
+              </div>
+              {mapUrl && (
+                <a
+                  href={mapUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-xs font-semibold text-rose-400 underline hover:text-rose-300"
+                >
+                  Abrir no Google Maps ↗
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {teacher && (
+          <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-rose-400">Atualizar localização do ônibus</h2>
+              <button
+                type="button"
+                onClick={captureGps}
+                disabled={gpsLoading}
+                className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
+              >
+                {gpsLoading ? 'Obtendo GPS...' : 'Usar GPS atual'}
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-slate-200">
+                Status da viagem
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 focus:border-emerald-400 focus:outline-none"
+                >
+                  {BUS_STATUSES.map((item) => (
+                    <option key={item.value} value={item.value}>{item.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm font-medium text-slate-200">
+                Ônibus / Placa
+                <input
+                  type="text"
+                  value={busName}
+                  onChange={(e) => setBusName(e.target.value)}
+                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 focus:border-emerald-400 focus:outline-none"
+                />
+              </label>
+
+              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
+                Localização / Ponto de referência
+                <input
+                  type="text"
+                  required
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="Ex.: Rodovia Anhanguera, km 45"
+                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                />
+              </label>
+
+              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
+                Progresso do trajeto ({progress}%)
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={progress}
+                  onChange={(e) => setProgress(Number(e.target.value))}
+                  className="mt-2 block w-full accent-emerald-500"
+                />
+              </label>
+
+              <label className="text-sm font-medium text-slate-200">
+                Latitude (opcional)
+                <input
+                  type="text"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                  placeholder="-23.550520"
+                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                />
+              </label>
+
+              <label className="text-sm font-medium text-slate-200">
+                Longitude (opcional)
+                <input
+                  type="text"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                  placeholder="-46.633308"
+                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                />
+              </label>
+
+              {error && <p role="alert" className="text-sm text-rose-300 sm:col-span-2">{error}</p>}
+
+              <button type="submit" className="rounded-xl bg-red-600 px-6 py-3 font-bold text-white hover:bg-red-500 sm:col-span-2">
+                Salvar localização
+              </button>
+            </form>
+          </section>
+        )}
       </div>
     </div>
   );

@@ -1,9 +1,18 @@
-export const STORAGE_KEY = 'sae:trips:v1';
-export const INITIAL_TRIPS = [
-  { id: '1', title: 'Viagem 3ºB', date: '2026-05-10', departure: '07:00', arrival: '18:00' },
-  { id: '2', title: 'Viagem 2ºA', date: '2026-08-12', departure: '07:00', arrival: '18:00' },
-  { id: '3', title: 'Viagem 9ºA', date: '2025-12-11', departure: '07:00', arrival: '18:00' },
+export const STORAGE_KEY = 'sae:trips:v2';
+export const INITIAL_TRIPS = [];
+
+export const BUS_STATUSES = [
+  { value: 'planned', label: 'Aguardando saída' },
+  { value: 'boarding', label: 'Embarcando' },
+  { value: 'transit', label: 'Em trajeto' },
+  { value: 'arrived', label: 'No destino' },
+  { value: 'returning', label: 'Retornando' },
+  { value: 'finished', label: 'Finalizada' },
 ];
+
+export function statusLabel(status) {
+  return BUS_STATUSES.find((item) => item.value === status)?.label ?? 'Aguardando saída';
+}
 
 function validDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -15,6 +24,50 @@ function validTime(value) {
   return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function defaultLocation(destination = '') {
+  return {
+    label: destination ? `Saída prevista para ${destination}` : 'Ponto de partida — Escola SESI',
+    lat: '',
+    lng: '',
+    progress: 0,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeTripFields(trip) {
+  const destination = typeof trip.destination === 'string' ? trip.destination.trim() : '';
+  const busName = typeof trip.busName === 'string' ? trip.busName.trim() : '';
+  const teacherName = typeof trip.teacherName === 'string' ? trip.teacherName.trim() : '';
+  const teacherContact = typeof trip.teacherContact === 'string' ? trip.teacherContact.trim() : '';
+  const status = BUS_STATUSES.some((s) => s.value === trip.status) ? trip.status : 'planned';
+  const loc = trip.busLocation && typeof trip.busLocation === 'object' ? trip.busLocation : defaultLocation(destination);
+  const progressNum = Number(loc.progress);
+  const progress = Number.isFinite(progressNum) ? Math.min(100, Math.max(0, Math.round(progressNum))) : 0;
+
+  return {
+    id: trip.id,
+    title: trip.title.trim(),
+    destination,
+    date: trip.date,
+    departure: trip.departure,
+    arrival: trip.arrival,
+    busName: busName || 'Ônibus fretado',
+    teacherName: teacherName || 'Professor responsável',
+    teacherContact,
+    status,
+    busLocation: {
+      label: typeof loc.label === 'string' && loc.label.trim() ? loc.label.trim() : defaultLocation(destination).label,
+      lat: typeof loc.lat === 'string' ? loc.lat.trim() : '',
+      lng: typeof loc.lng === 'string' ? loc.lng.trim() : '',
+      progress,
+      updatedAt: typeof loc.updatedAt === 'string' && loc.updatedAt ? loc.updatedAt : new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Validates required trip fields and schedule order.
+ */
 export function validateTrip(trip) {
   if (!trip || typeof trip !== 'object' || typeof trip.title !== 'string' || !trip.title.trim()) {
     return 'Informe o nome da viagem.';
@@ -26,62 +79,158 @@ export function validateTrip(trip) {
   return '';
 }
 
+/**
+ * Loads saved trips from storage; starts empty until a teacher creates one.
+ */
 export function loadTrips(storage) {
   try {
-    // Access inside try: browsers may deny even reading localStorage.
     const raw = (storage ?? globalThis.localStorage).getItem(STORAGE_KEY);
-    if (raw === null) return { trips: structuredClone(INITIAL_TRIPS), error: '' };
+    if (raw === null) return { trips: [], error: '' };
     const saved = JSON.parse(raw);
     const ids = new Set();
-    if (!Array.isArray(saved) || !saved.every((trip) => {
-      if (validateTrip(trip) || typeof trip.id !== 'string' || !trip.id.trim() || ids.has(trip.id)) return false;
-      ids.add(trip.id);
-      return true;
-    })) throw new Error('Invalid trips');
-    return { trips: saved, error: '' };
+    if (
+      !Array.isArray(saved) ||
+      !saved.every((trip) => {
+        if (validateTrip(trip) || typeof trip.id !== 'string' || !trip.id.trim() || ids.has(trip.id)) return false;
+        ids.add(trip.id);
+        return true;
+      })
+    ) {
+      throw new Error('Invalid trips');
+    }
+    return { trips: saved.map(normalizeTripFields), error: '' };
   } catch {
     return {
-      trips: structuredClone(INITIAL_TRIPS),
-      error: 'Não foi possível carregar o cronograma salvo. Exibindo exemplos; o conteúdo anterior só será substituído ao salvar uma alteração.',
+      trips: [],
+      error: 'Não foi possível carregar o cronograma salvo.',
     };
   }
 }
 
+/**
+ * Persists trips to local storage and notifies listeners in the same tab.
+ */
 export function saveTrips(trips, storage) {
   try {
     (storage ?? globalThis.localStorage).setItem(STORAGE_KEY, JSON.stringify(trips));
+    if (!storage && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sae:data-updated'));
+    }
     return '';
   } catch {
-    return 'Não foi possível salvar no navegador. Seus dados foram mantidos na tela; verifique o armazenamento disponível e tente novamente.';
+    return 'Não foi possível salvar no navegador. Verifique o armazenamento disponível e tente novamente.';
   }
 }
 
+/**
+ * Sorts trips chronologically by date, departure, and title.
+ */
 export function sortTrips(trips) {
-  return [...trips].sort((a, b) => a.date.localeCompare(b.date) || a.departure.localeCompare(b.departure) || a.title.localeCompare(b.title, 'pt-BR'));
+  return [...trips].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.departure.localeCompare(b.departure) || a.title.localeCompare(b.title, 'pt-BR'),
+  );
 }
 
-// Draft clearing is part of the transaction: only clear after saving succeeds.
+export const EMPTY_DRAFT = {
+  title: '',
+  destination: '',
+  date: '',
+  departure: '07:00',
+  arrival: '18:00',
+  busName: '',
+  teacherName: '',
+  teacherContact: '',
+};
+
+/**
+ * Validates, creates, and persists a new trip.
+ */
 export function addTrip(trips, draft, storage, createId = () => crypto.randomUUID()) {
   const error = validateTrip(draft);
   if (error) return { trips, draft, error };
   try {
-    const next = [...trips, { ...draft, title: draft.title.trim(), id: createId() }];
+    const created = normalizeTripFields({ ...draft, id: createId() });
+    const next = [...trips, created];
     const saveError = saveTrips(next, storage);
     if (saveError) return { trips, draft, error: saveError };
-    return { trips: next, draft: { title: '', date: '', departure: '07:00', arrival: '18:00' }, error: '' };
+    return { trips: next, draft: { ...EMPTY_DRAFT }, error: '' };
   } catch {
     return { trips, draft, error: 'Não foi possível criar a viagem. Tente novamente em um navegador atualizado.' };
   }
+}
+
+/**
+ * Updates an existing trip and persists the changes.
+ */
+export function updateTrip(trips, tripId, updates, storage) {
+  const index = trips.findIndex((t) => t.id === tripId);
+  if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+  const merged = { ...trips[index], ...updates, id: tripId };
+  const error = validateTrip(merged);
+  if (error) return { trips, error };
+  const next = trips.map((t) => (t.id === tripId ? normalizeTripFields(merged) : t));
+  const saveError = saveTrips(next, storage);
+  if (saveError) return { trips, error: saveError };
+  return { trips: next, error: '' };
+}
+
+/**
+ * Updates bus status and live location metadata for a trip.
+ */
+export function updateTripLocation(trips, tripId, { status, busName, label, lat, lng, progress }, storage) {
+  const index = trips.findIndex((t) => t.id === tripId);
+  if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+  const current = trips[index];
+  const nextStatus = BUS_STATUSES.some((s) => s.value === status) ? status : current.status;
+  const cleanLabel = typeof label === 'string' ? label.trim() : '';
+  if (!cleanLabel) return { trips, error: 'Informe a localização ou ponto de referência do ônibus.' };
+
+  const progressNum = Number(progress);
+  const clampedProgress = Number.isFinite(progressNum) ? Math.min(100, Math.max(0, Math.round(progressNum))) : current.busLocation.progress;
+
+  const updated = normalizeTripFields({
+    ...current,
+    status: nextStatus,
+    busName: typeof busName === 'string' && busName.trim() ? busName.trim() : current.busName,
+    busLocation: {
+      label: cleanLabel,
+      lat: typeof lat === 'string' ? lat.trim() : current.busLocation.lat,
+      lng: typeof lng === 'string' ? lng.trim() : current.busLocation.lng,
+      progress: clampedProgress,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  const next = trips.map((t) => (t.id === tripId ? updated : t));
+  const saveError = saveTrips(next, storage);
+  if (saveError) return { trips, error: saveError };
+  return { trips: next, error: '' };
+}
+
+/**
+ * Removes a trip by id and persists the remaining list.
+ */
+export function removeTrip(trips, tripId, storage) {
+  const next = trips.filter((t) => t.id !== tripId);
+  const saveError = saveTrips(next, storage);
+  if (saveError) return { trips, error: saveError };
+  return { trips: next, error: '' };
 }
 
 export function localToday(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Filters and sorts trips by accent-insensitive title/destination search and date period.
+ */
 export function filterTrips(trips, query = '', period = 'all', today = localToday()) {
   const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
   const search = normalize(query.trim());
-  return sortTrips(trips).filter((trip) => normalize(trip.title).includes(search)
-    && (period !== 'upcoming' || trip.date >= today)
-    && (period !== 'past' || trip.date < today));
+  return sortTrips(trips).filter(
+    (trip) =>
+      (normalize(trip.title).includes(search) || normalize(trip.destination || '').includes(search)) &&
+      (period !== 'upcoming' || trip.date >= today) &&
+      (period !== 'past' || trip.date < today),
+  );
 }
