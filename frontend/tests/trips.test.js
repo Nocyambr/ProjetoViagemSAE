@@ -7,7 +7,9 @@ import {
   loadTrips,
   removeTrip,
   saveTrips,
+  SESI_CERQUILHO,
   sortTrips,
+  startTrip,
   STORAGE_KEY,
   updateTrip,
   updateTripLocation,
@@ -36,9 +38,17 @@ test('salvamento, edição, localização do ônibus e exclusão funcionam em ci
   const edited = updateTrip(created.trips, 'trip-1', { title: 'Viagem 3ºA Atualizada' }, storage);
   assert.equal(edited.error, '');
   assert.equal(edited.trips[0].title, 'Viagem 3ºA Atualizada');
+  assert.equal(edited.trips[0].started, false);
+
+  const started = startTrip(edited.trips, 'trip-1', storage);
+  assert.equal(started.error, '');
+  assert.equal(started.trips[0].started, true);
+  assert.equal(started.trips[0].status, 'transit');
+  assert.equal(started.trips[0].busLocation.label, SESI_CERQUILHO.label);
+  assert.equal(started.trips[0].busLocation.lat, '-23.16345');
 
   const located = updateTripLocation(
-    edited.trips,
+    started.trips,
     'trip-1',
     { status: 'transit', busName: 'Ônibus 02', label: 'Marginal Tietê, km 12', lat: '-23.52', lng: '-46.66', progress: 45 },
     storage,

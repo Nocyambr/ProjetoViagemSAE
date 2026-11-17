@@ -1,8 +1,20 @@
+export const SESI_CERQUILHO = {
+  name: 'SESI Cerquilho - SP',
+  unit: 'CE 428',
+  label: 'SESI Cerquilho - SP (Rua Antônio Modanez, 111 - Residencial São Francisco)',
+  address: 'Rua Antônio Modanez, 111 - Residencial São Francisco, Cerquilho - SP, CEP 18527-372',
+  city: 'Cerquilho',
+  state: 'SP',
+  cep: '18527-372',
+  lat: '-23.16345',
+  lng: '-47.76580',
+};
+
 export const STORAGE_KEY = 'sae:trips:v2';
 export const INITIAL_TRIPS = [];
 
 export const BUS_STATUSES = [
-  { value: 'planned', label: 'Aguardando saída' },
+  { value: 'planned', label: 'Aguardando início' },
   { value: 'boarding', label: 'Embarcando' },
   { value: 'transit', label: 'Em trajeto' },
   { value: 'arrived', label: 'No destino' },
@@ -11,7 +23,7 @@ export const BUS_STATUSES = [
 ];
 
 export function statusLabel(status) {
-  return BUS_STATUSES.find((item) => item.value === status)?.label ?? 'Aguardando saída';
+  return BUS_STATUSES.find((item) => item.value === status)?.label ?? 'Aguardando início';
 }
 
 function validDate(value) {
@@ -24,23 +36,26 @@ function validTime(value) {
   return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
-function defaultLocation(destination = '') {
+function defaultLocation() {
   return {
-    label: destination ? `Saída prevista para ${destination}` : 'Ponto de partida — Escola SESI',
-    lat: '',
-    lng: '',
+    label: SESI_CERQUILHO.label,
+    address: SESI_CERQUILHO.address,
+    lat: SESI_CERQUILHO.lat,
+    lng: SESI_CERQUILHO.lng,
     progress: 0,
     updatedAt: new Date().toISOString(),
   };
 }
 
-function normalizeTripFields(trip) {
+export function normalizeTripFields(trip) {
   const destination = typeof trip.destination === 'string' ? trip.destination.trim() : '';
   const busName = typeof trip.busName === 'string' ? trip.busName.trim() : '';
   const teacherName = typeof trip.teacherName === 'string' ? trip.teacherName.trim() : '';
   const teacherContact = typeof trip.teacherContact === 'string' ? trip.teacherContact.trim() : '';
   const status = BUS_STATUSES.some((s) => s.value === trip.status) ? trip.status : 'planned';
-  const loc = trip.busLocation && typeof trip.busLocation === 'object' ? trip.busLocation : defaultLocation(destination);
+  const startedAt = typeof trip.startedAt === 'string' && trip.startedAt ? trip.startedAt : null;
+  const started = Boolean(trip.started || startedAt !== null || status !== 'planned');
+  const loc = trip.busLocation && typeof trip.busLocation === 'object' ? trip.busLocation : defaultLocation();
   const progressNum = Number(loc.progress);
   const progress = Number.isFinite(progressNum) ? Math.min(100, Math.max(0, Math.round(progressNum))) : 0;
 
@@ -55,10 +70,13 @@ function normalizeTripFields(trip) {
     teacherName: teacherName || 'Professor responsável',
     teacherContact,
     status,
+    started,
+    startedAt,
     busLocation: {
-      label: typeof loc.label === 'string' && loc.label.trim() ? loc.label.trim() : defaultLocation(destination).label,
-      lat: typeof loc.lat === 'string' ? loc.lat.trim() : '',
-      lng: typeof loc.lng === 'string' ? loc.lng.trim() : '',
+      label: typeof loc.label === 'string' && loc.label.trim() ? loc.label.trim() : SESI_CERQUILHO.label,
+      address: typeof loc.address === 'string' && loc.address.trim() ? loc.address.trim() : SESI_CERQUILHO.address,
+      lat: typeof loc.lat === 'string' ? loc.lat.trim() : SESI_CERQUILHO.lat,
+      lng: typeof loc.lng === 'string' ? loc.lng.trim() : SESI_CERQUILHO.lng,
       progress,
       updatedAt: typeof loc.updatedAt === 'string' && loc.updatedAt ? loc.updatedAt : new Date().toISOString(),
     },
@@ -160,6 +178,29 @@ export function addTrip(trips, draft, storage, createId = () => crypto.randomUUI
 }
 
 /**
+ * Marks a trip as started by the teacher and sets the origin to SESI Cerquilho-SP.
+ */
+export function startTrip(trips, tripId, storage) {
+  const index = trips.findIndex((t) => t.id === tripId);
+  if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+  const now = new Date().toISOString();
+  const updated = normalizeTripFields({
+    ...trips[index],
+    status: 'transit',
+    started: true,
+    startedAt: trips[index].startedAt ?? now,
+    busLocation: {
+      ...defaultLocation(),
+      updatedAt: now,
+    },
+  });
+  const next = trips.map((t) => (t.id === tripId ? updated : t));
+  const saveError = saveTrips(next, storage);
+  if (saveError) return { trips, error: saveError };
+  return { trips: next, error: '' };
+}
+
+/**
  * Updates an existing trip and persists the changes.
  */
 export function updateTrip(trips, tripId, updates, storage) {
@@ -177,7 +218,7 @@ export function updateTrip(trips, tripId, updates, storage) {
 /**
  * Updates bus status and live location metadata for a trip.
  */
-export function updateTripLocation(trips, tripId, { status, busName, label, lat, lng, progress }, storage) {
+export function updateTripLocation(trips, tripId, { status, busName, label, address, lat, lng, progress }, storage) {
   const index = trips.findIndex((t) => t.id === tripId);
   if (index === -1) return { trips, error: 'Viagem não encontrada.' };
   const current = trips[index];
@@ -187,17 +228,22 @@ export function updateTripLocation(trips, tripId, { status, busName, label, lat,
 
   const progressNum = Number(progress);
   const clampedProgress = Number.isFinite(progressNum) ? Math.min(100, Math.max(0, Math.round(progressNum))) : current.busLocation.progress;
+  const now = new Date().toISOString();
+  const started = current.started || nextStatus !== 'planned';
 
   const updated = normalizeTripFields({
     ...current,
     status: nextStatus,
+    started,
+    startedAt: current.startedAt ?? (started ? now : null),
     busName: typeof busName === 'string' && busName.trim() ? busName.trim() : current.busName,
     busLocation: {
       label: cleanLabel,
+      address: typeof address === 'string' && address.trim() ? address.trim() : current.busLocation.address,
       lat: typeof lat === 'string' ? lat.trim() : current.busLocation.lat,
       lng: typeof lng === 'string' ? lng.trim() : current.busLocation.lng,
       progress: clampedProgress,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     },
   });
 

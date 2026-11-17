@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { isTeacher } from '../lib/auth.js';
 import { filterTrips, statusLabel } from '../lib/trips.js';
+import { fetchTripLocationApi, startTripApi } from '../lib/api.js';
 import Icon from '../components/Icon.jsx';
 
 export default function Home({ user, portal }) {
@@ -10,6 +12,35 @@ export default function Home({ user, portal }) {
   const upcoming = filterTrips(trips, '', 'upcoming');
   const activeTrip = upcoming[0] ?? trips[0] ?? null;
   const latestPhotos = photos.slice(0, 3);
+
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [locationNotice, setLocationNotice] = useState('');
+  const [loadingLocation, setLoadingLocation] = useState(false);
+
+  async function handleTripClick(trip) {
+    setLoadingLocation(true);
+    setLocationNotice('');
+    const result = await fetchTripLocationApi(trip);
+    setLoadingLocation(false);
+    if (!result.started) {
+      setSelectedLocation(null);
+      setLocationNotice(result.error);
+      return;
+    }
+    setSelectedLocation(result.location);
+  }
+
+  async function handleStartTrip(trip) {
+    const result = await startTripApi(trips, trip.id);
+    if (result.error) {
+      setLocationNotice(result.error);
+      return;
+    }
+    const updatedTrip = result.trips.find((t) => t.id === trip.id);
+    if (updatedTrip) {
+      await handleTripClick(updatedTrip);
+    }
+  }
 
   const cards = [
     {
@@ -95,55 +126,83 @@ export default function Home({ user, portal }) {
         <div className="flex flex-col gap-6">
           <section className="rounded-2xl border border-emerald-800/60 bg-[#0a2e25] p-6 text-white shadow-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-              {activeTrip ? 'Viagem ativa' : 'Status das viagens'}
+              {activeTrip ? 'Viagem cadastrada' : 'Status das viagens'}
             </p>
             <h2 className="mt-3 text-xl font-bold">
               {activeTrip ? activeTrip.title : 'Nenhuma viagem criada'}
             </h2>
 
             {activeTrip ? (
-              <div className="mt-3 space-y-1.5 text-sm text-emerald-100">
+              <div className="mt-3 space-y-2 text-sm text-emerald-100">
                 {activeTrip.destination && <p>Destino: {activeTrip.destination}</p>}
                 <p>{`${activeTrip.date.split('-').reverse().join('/')} · ${activeTrip.departure} – ${activeTrip.arrival}`}</p>
                 <p className="inline-block rounded-full border border-emerald-700/60 bg-emerald-900/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-200">
-                  {statusLabel(activeTrip.status)}
+                  {activeTrip.started ? `Iniciada · ${statusLabel(activeTrip.status)}` : 'Aguardando início do professor'}
                 </p>
               </div>
             ) : (
               <p className="mt-3 text-sm text-emerald-100/90">
                 {teacher
-                  ? 'Crie uma viagem para liberar o acompanhamento aos alunos e pais.'
+                  ? 'Crie e inicie uma viagem para liberar a localização aos alunos e pais.'
                   : 'Localização do ônibus e fotos serão liberadas após o professor criar uma viagem.'}
               </p>
             )}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              {teacher ? (
+              {activeTrip && (
+                <button
+                  type="button"
+                  onClick={() => handleTripClick(activeTrip)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50"
+                >
+                  <span>{loadingLocation ? 'Consultando API...' : 'Ver localização atual'}</span>
+                  <Icon name="arrow-right" />
+                </button>
+              )}
+
+              {teacher && activeTrip && !activeTrip.started && (
+                <button
+                  type="button"
+                  onClick={() => handleStartTrip(activeTrip)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#f6c45b] px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-[#ffda8d]"
+                >
+                  <span>Iniciar viagem</span>
+                </button>
+              )}
+
+              {teacher && !activeTrip && (
                 <Link to="/data-horarios" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
-                  <span>{hasTrips ? 'Abrir painel' : 'Criar viagem'}</span>
+                  <span>Criar viagem</span>
                   <Icon name="arrow-right" />
                 </Link>
-              ) : hasTrips ? (
-                <Link to="/locomocoes" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
-                  <span>Ver ônibus</span>
-                  <Icon name="arrow-right" />
-                </Link>
-              ) : null}
+              )}
             </div>
 
             {tripsError && <p className="mt-3 text-xs text-amber-200">{tripsError}</p>}
           </section>
 
-          {activeTrip && (
-            <section className="rounded-2xl border border-slate-800 bg-[#131d24] p-5 text-slate-100 shadow-sm">
+          {locationNotice && (
+            <p role="status" className="rounded-2xl border border-amber-600/60 bg-amber-950/60 p-4 text-sm text-amber-200">
+              {locationNotice}
+            </p>
+          )}
+
+          {selectedLocation && (
+            <section className="rounded-2xl border border-emerald-600/70 bg-[#131d24] p-5 text-slate-100 shadow-sm" aria-live="polite">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-rose-400">Localização atual</h2>
-                <span className="text-xs text-slate-400">{activeTrip.busLocation.progress}%</span>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-300">Localização atual (API)</h2>
+                <span className="text-xs text-slate-400">{selectedLocation.currentLocation.progress}%</span>
               </div>
-              <p className="mt-2 text-sm font-medium text-slate-100">{activeTrip.busLocation.label}</p>
-              <p className="mt-1 text-xs text-slate-400">{activeTrip.busName}</p>
-              <Link to="/locomocoes" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 underline hover:text-emerald-200">
-                <span>{teacher ? 'Atualizar localização' : 'Abrir mapa da rota'}</span>
+              <p className="mt-2 text-base font-bold text-white">{selectedLocation.origin?.name || 'SESI Cerquilho - SP'}</p>
+              <p className="mt-1 text-xs text-slate-300">{selectedLocation.currentLocation.address || selectedLocation.origin?.address}</p>
+              <p className="mt-2 text-sm font-medium text-emerald-200">{selectedLocation.currentLocation.label}</p>
+              {selectedLocation.currentLocation.lat && selectedLocation.currentLocation.lng && (
+                <p className="mt-1 text-xs text-slate-400">
+                  GPS: {selectedLocation.currentLocation.lat}, {selectedLocation.currentLocation.lng}
+                </p>
+              )}
+              <Link to="/locomocoes" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 underline hover:text-rose-300">
+                <span>Abrir mapa da rota</span>
                 <Icon name="arrow-right" className="h-3.5 w-3.5 shrink-0" />
               </Link>
             </section>
@@ -151,6 +210,30 @@ export default function Home({ user, portal }) {
         </div>
 
         <div className="md:col-span-2 flex flex-col gap-6">
+          {trips.length > 1 && (
+            <section className="rounded-2xl border border-slate-800 bg-[#131d24] p-5">
+              <h2 className="mb-3 text-base font-bold text-slate-100">Viagens disponíveis (clique para ver localização)</h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {trips.map((trip) => (
+                  <button
+                    key={trip.id}
+                    type="button"
+                    onClick={() => handleTripClick(trip)}
+                    className="flex items-center justify-between rounded-xl border border-slate-700 bg-[#0b1116] px-4 py-3 text-left transition-colors hover:border-emerald-500"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-slate-100">{trip.title}</p>
+                      <p className="text-xs text-slate-400">
+                        {trip.started ? statusLabel(trip.status) : 'Aguardando início'}
+                      </p>
+                    </div>
+                    <Icon name={trip.started ? 'arrow-right' : 'lock'} className="h-4 w-4 text-emerald-300" />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           <div>
             <h2 className="text-2xl font-bold text-slate-100 mb-4">Acesso rápido</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

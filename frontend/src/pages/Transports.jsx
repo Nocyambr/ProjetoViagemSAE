@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
-import { BUS_STATUSES, statusLabel, updateTripLocation } from '../lib/trips.js';
+import { BUS_STATUSES, SESI_CERQUILHO, statusLabel } from '../lib/trips.js';
+import { fetchTripLocationApi, startTripApi, updateTripLocationApi } from '../lib/api.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -22,10 +23,12 @@ export default function Transports({ user, portal }) {
 
   const [status, setStatus] = useState(activeTrip?.status ?? 'planned');
   const [busName, setBusName] = useState(activeTrip?.busName ?? '');
-  const [label, setLabel] = useState(activeTrip?.busLocation?.label ?? '');
-  const [lat, setLat] = useState(activeTrip?.busLocation?.lat ?? '');
-  const [lng, setLng] = useState(activeTrip?.busLocation?.lng ?? '');
+  const [label, setLabel] = useState(activeTrip?.busLocation?.label ?? SESI_CERQUILHO.label);
+  const [address, setAddress] = useState(activeTrip?.busLocation?.address ?? SESI_CERQUILHO.address);
+  const [lat, setLat] = useState(activeTrip?.busLocation?.lat ?? SESI_CERQUILHO.lat);
+  const [lng, setLng] = useState(activeTrip?.busLocation?.lng ?? SESI_CERQUILHO.lng);
   const [progress, setProgress] = useState(activeTrip?.busLocation?.progress ?? 0);
+  const [apiLocation, setApiLocation] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -36,21 +39,63 @@ export default function Transports({ user, portal }) {
     setStatus(activeTrip.status);
     setBusName(activeTrip.busName);
     setLabel(activeTrip.busLocation.label);
+    setAddress(activeTrip.busLocation.address || SESI_CERQUILHO.address);
     setLat(activeTrip.busLocation.lat);
     setLng(activeTrip.busLocation.lng);
     setProgress(activeTrip.busLocation.progress);
-  }, [activeTrip?.id, activeTrip?.busLocation?.updatedAt]);
+
+    if (activeTrip.started) {
+      fetchTripLocationApi(activeTrip).then((res) => {
+        if (res.started) setApiLocation(res.location);
+      });
+    } else {
+      setApiLocation(null);
+    }
+  }, [activeTrip?.id, activeTrip?.started, activeTrip?.busLocation?.updatedAt]);
 
   if (!trips.length) {
     return <TripRequiredGate isTeacher={teacher} title="Localização do Ônibus" />;
   }
 
-  function handleSave(e) {
+  if (!teacher && activeTrip && !activeTrip.started) {
+    return (
+      <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
+        <div className="mx-auto max-w-2xl rounded-3xl border border-slate-800 bg-[#131d24] p-6 text-center shadow-sm sm:p-8">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-amber-300" aria-hidden="true">
+            <Icon name="lock" className="h-6 w-6" />
+          </div>
+          <h1 className="text-2xl font-bold text-rose-400">Localização do Ônibus</h1>
+          <p className="mt-3 text-sm text-slate-300">
+            A viagem "{activeTrip.title}" ainda não foi iniciada pelo professor. A localização atual (SESI Cerquilho - SP) aparecerá assim que for iniciada.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleStartNow() {
+    if (!teacher || !activeTrip) return;
+    const res = await startTripApi(trips, activeTrip.id);
+    setError(res.error);
+    if (!res.error) {
+      setNotice('Viagem iniciada! Localização atual definida em SESI Cerquilho - SP.');
+    }
+  }
+
+  async function handleSave(e) {
     e.preventDefault();
     if (!teacher || !activeTrip) return;
-    const res = updateTripLocation(trips, activeTrip.id, { status, busName, label, lat, lng, progress });
+    const res = await updateTripLocationApi(trips, activeTrip.id, { status, busName, label, address, lat, lng, progress });
     setError(res.error);
-    setNotice(res.error ? '' : 'Localização do ônibus atualizada.');
+    setNotice(res.error ? '' : 'Localização do ônibus atualizada via API.');
+  }
+
+  function applySesiCerquilho() {
+    setLabel(SESI_CERQUILHO.label);
+    setAddress(SESI_CERQUILHO.address);
+    setLat(SESI_CERQUILHO.lat);
+    setLng(SESI_CERQUILHO.lng);
+    setNotice('Coordenadas de SESI Cerquilho - SP aplicadas. Clique em salvar.');
   }
 
   function captureGps() {
@@ -66,28 +111,27 @@ export default function Transports({ user, portal }) {
         const nextLng = pos.coords.longitude.toFixed(6);
         setLat(nextLat);
         setLng(nextLng);
-        if (!label.trim() || label.startsWith('Ponto de partida')) {
-          setLabel(`GPS capturado (${nextLat}, ${nextLng})`);
-        }
+        setLabel(`GPS capturado (${nextLat}, ${nextLng})`);
         setGpsLoading(false);
         setNotice('Coordenadas GPS capturadas. Clique em salvar para publicar.');
       },
       () => {
         setGpsLoading(false);
-        setError('Não foi possível obter o GPS do dispositivo. Você pode preencher o endereço manualmente.');
+        setError('Não foi possível obter o GPS do dispositivo. Você pode usar SESI Cerquilho - SP ou preencher manualmente.');
       },
       { enableHighAccuracy: true, timeout: 8000 },
     );
   }
 
-  const hasCoords = Boolean(activeTrip?.busLocation.lat && activeTrip?.busLocation.lng);
+  const currentLoc = apiLocation?.currentLocation ?? activeTrip.busLocation;
+  const hasCoords = Boolean(currentLoc.lat && currentLoc.lng);
   const mapUrl = hasCoords
-    ? `https://www.google.com/maps?q=${encodeURIComponent(`${activeTrip.busLocation.lat},${activeTrip.busLocation.lng}`)}`
-    : activeTrip?.busLocation.label
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeTrip.busLocation.label)}`
+    ? `https://www.google.com/maps?q=${encodeURIComponent(`${currentLoc.lat},${currentLoc.lng}`)}`
+    : currentLoc.label
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentLoc.label)}`
       : '';
 
-  const busX = 48 + (activeTrip.busLocation.progress / 100) * 504;
+  const busX = 48 + (currentLoc.progress / 100) * 504;
 
   return (
     <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
@@ -120,20 +164,30 @@ export default function Transports({ user, portal }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="inline-block rounded-full border border-emerald-600/60 bg-emerald-950/80 px-3 py-1 text-xs font-bold text-emerald-300">
-                {statusLabel(activeTrip.status)}
+                {activeTrip.started ? statusLabel(activeTrip.status) : 'Aguardando início'}
               </span>
               <h2 className="mt-2 text-xl font-bold text-slate-100">{activeTrip.title}</h2>
               <p className="text-sm text-slate-400">{activeTrip.busName}</p>
             </div>
-            <div className="text-right text-xs text-slate-400">
-              <p>Atualizado em</p>
-              <p className="font-semibold text-slate-200">{formatTime(activeTrip.busLocation.updatedAt)}</p>
+            <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-400">
+              {teacher && !activeTrip.started && (
+                <button
+                  type="button"
+                  onClick={handleStartNow}
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500"
+                >
+                  Iniciar viagem agora
+                </button>
+              )}
+              <div>
+                <p>Atualizado em</p>
+                <p className="font-semibold text-slate-200">{formatTime(currentLoc.updatedAt)}</p>
+              </div>
             </div>
           </div>
 
-          {/* Self-contained dark SVG route map */}
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4">
-            <svg viewBox="0 0 600 130" className="w-full h-auto" role="img" aria-label={`Progresso do trajeto: ${activeTrip.busLocation.progress}%`}>
+            <svg viewBox="0 0 600 130" className="w-full h-auto" role="img" aria-label={`Progresso do trajeto: ${currentLoc.progress}%`}>
               <defs>
                 <linearGradient id="routeGrad" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="552" y2="0">
                   <stop offset="0%" stopColor="#10b981" />
@@ -152,7 +206,7 @@ export default function Transports({ user, portal }) {
                 <circle cx="-12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
                 <circle cx="12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
               </g>
-              <text x="48" y="102" textAnchor="start" fill="#cbd5e1" fontSize="12" fontWeight="600">Escola SESI</text>
+              <text x="48" y="102" textAnchor="start" fill="#cbd5e1" fontSize="12" fontWeight="600">SESI Cerquilho - SP</text>
               <text x="552" y="102" textAnchor="end" fill="#f6c45b" fontSize="12" fontWeight="600">
                 {activeTrip.destination || 'Destino'}
               </text>
@@ -161,18 +215,19 @@ export default function Transports({ user, portal }) {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Localização atual</p>
-              <p className="mt-1 text-base font-bold text-slate-100">{activeTrip.busLocation.label}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Localização atual (API)</p>
+              <p className="mt-1 text-base font-bold text-slate-100">{currentLoc.label}</p>
+              <p className="mt-1 text-xs text-slate-300">{currentLoc.address || SESI_CERQUILHO.address}</p>
               {hasCoords && (
                 <p className="mt-1 text-xs text-slate-400">
-                  Coordenadas: {activeTrip.busLocation.lat}, {activeTrip.busLocation.lng}
+                  Coordenadas: {currentLoc.lat}, {currentLoc.lng}
                 </p>
               )}
             </div>
             <div className="flex flex-col justify-between rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Percurso concluído</p>
-                <p className="mt-1 text-2xl font-extrabold text-emerald-300">{activeTrip.busLocation.progress}%</p>
+                <p className="mt-1 text-2xl font-extrabold text-emerald-300">{currentLoc.progress}%</p>
               </div>
               {mapUrl && (
                 <a
@@ -193,14 +248,23 @@ export default function Transports({ user, portal }) {
           <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-rose-400">Atualizar localização do ônibus</h2>
-              <button
-                type="button"
-                onClick={captureGps}
-                disabled={gpsLoading}
-                className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
-              >
-                {gpsLoading ? 'Obtendo GPS...' : 'Usar GPS atual'}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={applySesiCerquilho}
+                  className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-100 hover:bg-slate-700"
+                >
+                  Definir SESI Cerquilho - SP
+                </button>
+                <button
+                  type="button"
+                  onClick={captureGps}
+                  disabled={gpsLoading}
+                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
+                >
+                  {gpsLoading ? 'Obtendo GPS...' : 'Usar GPS atual'}
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
@@ -234,7 +298,7 @@ export default function Transports({ user, portal }) {
                   required
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="Ex.: Rodovia Anhanguera, km 45"
+                  placeholder="Ex.: SESI Cerquilho - SP (Rua Antônio Modanez, 111)"
                   className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
                 />
               </label>
@@ -252,23 +316,23 @@ export default function Transports({ user, portal }) {
               </label>
 
               <label className="text-sm font-medium text-slate-200">
-                Latitude (opcional)
+                Latitude
                 <input
                   type="text"
                   value={lat}
                   onChange={(e) => setLat(e.target.value)}
-                  placeholder="-23.550520"
+                  placeholder="-23.16345"
                   className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
                 />
               </label>
 
               <label className="text-sm font-medium text-slate-200">
-                Longitude (opcional)
+                Longitude
                 <input
                   type="text"
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
-                  placeholder="-46.633308"
+                  placeholder="-47.76580"
                   className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
                 />
               </label>

@@ -2,15 +2,21 @@ import { useMemo, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
 import {
   EMPTY_DRAFT,
-  addTrip as createTrip,
   filterTrips,
   localToday,
-  removeTrip,
   statusLabel,
-  updateTrip,
+  validateTrip,
 } from '../lib/trips.js';
+import {
+  createTripApi,
+  deleteTripApi,
+  fetchTripLocationApi,
+  startTripApi,
+  updateTripApi,
+} from '../lib/api.js';
 import { removePhotosByTrip } from '../lib/photos.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
+import Icon from '../components/Icon.jsx';
 
 export default function Schedule({ user, portal }) {
   const teacher = isTeacher(user);
@@ -22,6 +28,7 @@ export default function Schedule({ user, portal }) {
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
   const [period, setPeriod] = useState('all');
+  const [inspectedLocations, setInspectedLocations] = useState({});
 
   const sortedTrips = useMemo(() => filterTrips(trips, query, period), [trips, query, period]);
 
@@ -29,12 +36,19 @@ export default function Schedule({ user, portal }) {
     return <TripRequiredGate isTeacher={false} title="Cronograma" />;
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (!teacher) return;
 
+    const validationError = validateTrip(draft);
+    if (validationError) {
+      setError(validationError);
+      setNotice('');
+      return;
+    }
+
     if (editingId) {
-      const result = updateTrip(trips, editingId, draft);
+      const result = await updateTripApi(trips, editingId, draft);
       setError(result.error);
       if (!result.error) {
         setNotice('Viagem atualizada com sucesso.');
@@ -46,10 +60,42 @@ export default function Schedule({ user, portal }) {
       return;
     }
 
-    const result = createTrip(trips, draft);
+    const result = await createTripApi(trips, draft);
     setError(result.error);
-    setNotice(result.error ? '' : 'Viagem criada e liberada para alunos e pais.');
-    setDraft(result.draft);
+    if (!result.error) {
+      setNotice('Viagem criada! Clique em "Iniciar viagem" quando sair do SESI Cerquilho - SP.');
+      setDraft(EMPTY_DRAFT);
+    } else {
+      setNotice('');
+    }
+  }
+
+  async function handleStart(trip) {
+    if (!teacher) return;
+    const result = await startTripApi(trips, trip.id);
+    setError(result.error);
+    if (!result.error) {
+      setNotice(`Viagem "${trip.title}" iniciada com localização atual em SESI Cerquilho - SP.`);
+      const locRes = await fetchTripLocationApi({ ...trip, started: true, status: 'transit' });
+      if (locRes.started) {
+        setInspectedLocations((prev) => ({ ...prev, [trip.id]: locRes.location }));
+      }
+    }
+  }
+
+  async function handleInspectLocation(trip) {
+    const res = await fetchTripLocationApi(trip);
+    if (!res.started) {
+      setInspectedLocations((prev) => ({
+        ...prev,
+        [trip.id]: { error: res.error },
+      }));
+      return;
+    }
+    setInspectedLocations((prev) => ({
+      ...prev,
+      [trip.id]: res.location,
+    }));
   }
 
   function startEdit(trip) {
@@ -74,10 +120,10 @@ export default function Schedule({ user, portal }) {
     setError('');
   }
 
-  function handleDelete(trip) {
+  async function handleDelete(trip) {
     if (!teacher) return;
     if (window.confirm(`Excluir a viagem "${trip.title}"?`)) {
-      const res = removeTrip(trips, trip.id);
+      const res = await deleteTripApi(trips, trip.id);
       if (!res.error) {
         removePhotosByTrip(photos, trip.id);
         if (editingId === trip.id) cancelEdit();
@@ -256,7 +302,7 @@ export default function Schedule({ user, portal }) {
               <select
                 value={period}
                 onChange={(event) => setPeriod(event.target.value)}
-                className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 focus:border-emerald-400 focus:outline-none"
+                className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 focus:border-emerald-400 focus:outline-none"
               >
                 <option value="all">Todas as viagens</option>
                 <option value="upcoming">A partir de hoje</option>
@@ -283,41 +329,97 @@ export default function Schedule({ user, portal }) {
           )}
 
           <ul className="space-y-4">
-            {sortedTrips.map((trip) => (
-              <li key={trip.id} className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
-                <div className="min-w-0 break-words">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-bold text-rose-400">{trip.title}</h3>
-                    <span className="rounded-full border border-emerald-700/60 bg-emerald-950/70 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
-                      {statusLabel(trip.status)}
-                    </span>
-                  </div>
-                  {trip.destination && <p className="mt-1 text-sm text-slate-200">Destino: {trip.destination}</p>}
-                  <p className="mt-1 text-sm text-slate-300">
-                    {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {trip.busName} · {trip.teacherName}
-                  </p>
-                </div>
+            {sortedTrips.map((trip) => {
+              const inspected = inspectedLocations[trip.id];
+              return (
+                <li key={trip.id} className="border-b border-slate-800 pb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 break-words">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleInspectLocation(trip)}
+                          className="text-left font-bold text-rose-400 underline-offset-4 hover:underline"
+                        >
+                          {trip.title}
+                        </button>
+                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                          trip.started
+                            ? 'border-emerald-700/60 bg-emerald-950/70 text-emerald-300'
+                            : 'border-slate-600 bg-slate-800 text-slate-300'
+                        }`}>
+                          {trip.started ? `Iniciada · ${statusLabel(trip.status)}` : 'Aguardando início'}
+                        </span>
+                      </div>
+                      {trip.destination && <p className="mt-1 text-sm text-slate-200">Destino: {trip.destination}</p>}
+                      <p className="mt-1 text-sm text-slate-300">
+                        {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {trip.busName} · {trip.teacherName}
+                      </p>
+                    </div>
 
-                {teacher && (
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => startEdit(trip)} className="text-sm text-emerald-300 underline hover:text-emerald-200">
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Excluir ${trip.title}`}
-                      onClick={() => handleDelete(trip)}
-                      className="text-sm text-rose-400 underline hover:text-rose-300"
-                    >
-                      Excluir
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleInspectLocation(trip)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+                      >
+                        {!trip.started && <Icon name="lock" className="h-3.5 w-3.5" />}
+                        <span>Localização</span>
+                      </button>
+
+                      {teacher && !trip.started && (
+                        <button
+                          type="button"
+                          onClick={() => handleStart(trip)}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
+                        >
+                          Iniciar viagem
+                        </button>
+                      )}
+
+                      {teacher && (
+                        <>
+                          <button type="button" onClick={() => startEdit(trip)} className="text-sm text-emerald-300 underline hover:text-emerald-200">
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Excluir ${trip.title}`}
+                            onClick={() => handleDelete(trip)}
+                            className="text-sm text-rose-400 underline hover:text-rose-300"
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </li>
-            ))}
+
+                  {inspected && (
+                    <div className="mt-3 rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4 text-sm">
+                      {inspected.error ? (
+                        <p className="text-amber-300">{inspected.error}</p>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                            Localização atual (API)
+                          </p>
+                          <p className="font-bold text-slate-100">{inspected.origin?.name || 'SESI Cerquilho - SP'}</p>
+                          <p className="text-xs text-slate-300">{inspected.currentLocation.address || inspected.origin?.address}</p>
+                          <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
+                          <p className="text-xs text-slate-400">
+                            GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng} · {inspected.currentLocation.progress}% concluído
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       </div>

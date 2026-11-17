@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { loadTrips } from './trips.js';
 import { loadPhotos } from './photos.js';
 import { loadTeachers } from './teachers.js';
+import { fetchTripsApi } from './api.js';
 
 /**
- * Subscribes to localStorage updates across tabs and within the current tab.
+ * Subscribes to localStorage updates and synchronizes trips from the Laravel API.
  */
 export function usePortalData() {
   const [state, setState] = useState(() => ({
@@ -13,21 +14,34 @@ export function usePortalData() {
     teachersState: loadTeachers(),
   }));
 
+  const refreshFromApi = useCallback(async () => {
+    await fetchTripsApi();
+  }, []);
+
   useEffect(() => {
-    const sync = () => {
+    const syncLocal = () => {
       setState({
         tripsState: loadTrips(),
         photosState: loadPhotos(),
         teachersState: loadTeachers(),
       });
     };
-    window.addEventListener('storage', sync);
-    window.addEventListener('sae:data-updated', sync);
-    return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('sae:data-updated', sync);
+
+    refreshFromApi();
+
+    const onFocus = () => {
+      refreshFromApi();
     };
-  }, []);
+
+    window.addEventListener('storage', syncLocal);
+    window.addEventListener('sae:data-updated', syncLocal);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('storage', syncLocal);
+      window.removeEventListener('sae:data-updated', syncLocal);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refreshFromApi]);
 
   return {
     trips: state.tripsState.trips,
@@ -36,5 +50,6 @@ export function usePortalData() {
     photosError: state.photosState.error,
     teachers: state.teachersState.teachers,
     teachersError: state.teachersState.error,
+    refreshFromApi,
   };
 }
