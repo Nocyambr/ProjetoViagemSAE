@@ -24,7 +24,7 @@ export default function Login({ onLogin }) {
 
   return (
     <main className="relative isolate flex min-h-dvh flex-col items-center justify-center bg-[#0b1116] p-4 py-8 text-slate-100">
-      <img src="/images/mundo-de-descobertas.webp" alt="" width="2048" height="1024" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />
+      <img src="/images/sesi-cerquilho-hero.jpg" alt="" width="1408" height="768" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1116]/80 via-[#0b1116]/70 to-[#0b1116]/95" />
 
       <div className="mb-6 text-center text-white">

@@ -46,25 +46,25 @@ export default function Home({ user, portal }) {
     {
       to: '/locomocoes',
       title: 'Localização do Ônibus',
-      image: '/images/laboratorio-de-curiosidades.webp',
+      image: '/images/sesi-onibus.jpg',
       locked: !hasTrips,
     },
     {
       to: '/fotos',
       title: 'Fotos',
-      image: '/images/aventura-floresta.webp',
+      image: '/images/sesi-excursao.jpg',
       locked: !hasTrips,
     },
     {
       to: '/data-horarios',
       title: teacher ? 'Configurar Viagens' : 'Cronograma',
-      image: '/images/mundo-de-descobertas.webp',
+      image: '/images/sesi-escola-patio.jpg',
       locked: !teacher && !hasTrips,
     },
     {
       to: '/professores',
       title: 'Professores Responsáveis',
-      image: '/images/exploracao-educativa.webp',
+      image: '/images/sesi-professores.jpg',
       locked: !hasTrips,
     },
   ];
@@ -75,10 +75,10 @@ export default function Home({ user, portal }) {
         <section className="creative-hero" aria-labelledby="aventura-title">
           <div className="creative-hero-art">
             <img
-              src="/images/mundo-de-descobertas.webp"
-              alt="Ilustração do SESI Aventura Educativa"
-              width="2048"
-              height="1024"
+              src="/images/sesi-cerquilho-hero.jpg"
+              alt="Fachada da escola SESI Cerquilho"
+              width="1408"
+              height="768"
               fetchPriority="high"
             />
           </div>

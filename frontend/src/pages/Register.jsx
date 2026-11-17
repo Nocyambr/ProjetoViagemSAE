@@ -34,10 +34,10 @@ export default function Register({ onLogin }) {
   return (
     <main className="relative isolate flex min-h-dvh items-center justify-center overflow-x-clip bg-[#0b1116] p-3 text-slate-100 sm:p-6">
       <img
-        src="/images/laboratorio-de-curiosidades.webp"
+        src="/images/sesi-escola-patio.jpg"
         alt=""
-        width="1536"
-        height="1024"
+        width="1408"
+        height="768"
         fetchPriority="high"
         className="absolute inset-0 -z-20 h-full w-full object-cover opacity-30"
       />
