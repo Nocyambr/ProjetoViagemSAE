@@ -404,12 +404,14 @@ export default function Schedule({ user, portal }) {
                         <p className="text-amber-300">{inspected.error}</p>
                       ) : (
                         <div className="space-y-1">
-                          <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                            Localização atual (API)
+                          <p className="text-xs font-bold text-emerald-300">
+                            Localização atual
                           </p>
                           <p className="font-bold text-slate-100">{inspected.origin?.name || 'SESI Cerquilho - SP'}</p>
                           <p className="text-xs text-slate-300">{inspected.currentLocation.address || inspected.origin?.address}</p>
-                          <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
+                          {inspected.currentLocation.label && inspected.currentLocation.label !== inspected.origin?.label && (
+                            <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
+                          )}
                           <p className="text-xs text-slate-400">
                             GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng} · {inspected.currentLocation.progress}% concluído
                           </p>

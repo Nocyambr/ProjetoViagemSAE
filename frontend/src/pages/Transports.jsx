@@ -215,7 +215,7 @@ export default function Transports({ user, portal }) {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Localização atual (API)</p>
+              <p className="text-xs font-semibold text-slate-400">Localização atual</p>
               <p className="mt-1 text-base font-bold text-slate-100">{currentLoc.label}</p>
               <p className="mt-1 text-xs text-slate-300">{currentLoc.address || SESI_CERQUILHO.address}</p>
               {hasCoords && (
@@ -226,7 +226,7 @@ export default function Transports({ user, portal }) {
             </div>
             <div className="flex flex-col justify-between rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Percurso concluído</p>
+                <p className="text-xs font-semibold text-slate-400">Trajeto</p>
                 <p className="mt-1 text-2xl font-extrabold text-emerald-300">{currentLoc.progress}%</p>
               </div>
               {mapUrl && (
