@@ -34,14 +34,14 @@ class TripLocationApiTest extends TestCase
             'departure' => '08:00',
             'arrival' => '17:00',
             'busName' => 'Ônibus 01',
-            'teacherName' => 'Prof. Carlos',
-            'teacherPhoto' => '/images/teachers/prof-carlos.jpg',
+            'teacherName' => 'Ricardo',
+            'teacherPhoto' => '/images/teachers/prof-ricardo.jpg',
         ]);
 
         $created->assertCreated()
             ->assertJsonPath('trip.started', false)
             ->assertJsonPath('trip.status', 'planned')
-            ->assertJsonPath('trip.teacherPhoto', '/images/teachers/prof-carlos.jpg');
+            ->assertJsonPath('trip.teacherPhoto', '/images/teachers/prof-ricardo.jpg');
 
         $tripId = $created->json('trip.id');
 

@@ -2,43 +2,29 @@ export const TEACHERS_STORAGE_KEY = 'sae:teachers:v1';
 
 export const TEACHER_DIRECTORY = [
   {
-    id: 'prof-carlos',
-    name: 'Prof. Carlos Eduardo',
-    role: 'Educação Física · Coordenação',
-    contact: 'carlos.eduardo@sesisp.org.br',
-    photo: '/images/teachers/prof-carlos.jpg',
+    id: 'prof-ricardo',
+    name: 'Ricardo',
+    role: 'Professor',
+    contact: '',
+    photo: '/images/teachers/prof-ricardo.jpg',
   },
   {
-    id: 'profa-ana',
-    name: 'Profa. Ana Paula',
-    role: 'Biologia e Ciências',
-    contact: 'ana.paula@sesisp.org.br',
-    photo: '/images/teachers/profa-ana.jpg',
-  },
-  {
-    id: 'prof-rafael',
-    name: 'Prof. Rafael Mendes',
-    role: 'História e Geografia',
-    contact: 'rafael.mendes@sesisp.org.br',
-    photo: '/images/teachers/prof-rafael.jpg',
-  },
-  {
-    id: 'profa-juliana',
-    name: 'Profa. Juliana Costa',
-    role: 'Química e Orientação',
-    contact: 'juliana.costa@sesisp.org.br',
-    photo: '/images/teachers/profa-juliana.jpg',
+    id: 'prof-andre',
+    name: 'André',
+    role: 'Professor',
+    contact: '',
+    photo: '/images/teachers/prof-andre.jpg',
   },
 ];
 
 /**
- * Resolves a teacher's portrait photo URL from an explicit value or the SESI directory.
+ * Resolves a teacher's portrait photo URL from an explicit value or the directory.
  */
 export function resolveTeacherPhoto(name, explicitPhoto = '') {
   if (typeof explicitPhoto === 'string' && explicitPhoto.trim()) return explicitPhoto.trim();
   const clean = typeof name === 'string' ? name.trim().toLowerCase() : '';
   const match = TEACHER_DIRECTORY.find(
-    (item) => item.name.toLowerCase() === clean || clean.includes(item.name.toLowerCase().split(' ').slice(0, 2).join(' ')),
+    (item) => clean === item.name.toLowerCase() || clean.includes(item.name.toLowerCase()),
   );
   return match?.photo ?? TEACHER_DIRECTORY[0].photo;
 }
@@ -93,7 +79,7 @@ export function addTeacher(teachers, { name, role, contact, photo, tripId }, sto
   const entry = {
     id: createId(),
     name: cleanName.slice(0, 80),
-    role: typeof role === 'string' && role.trim() ? role.trim().slice(0, 60) : 'Professor acompanhante',
+    role: typeof role === 'string' && role.trim() ? role.trim().slice(0, 60) : 'Professor',
     contact: typeof contact === 'string' ? contact.trim().slice(0, 80) : '',
     photo: resolveTeacherPhoto(cleanName, photo),
     tripId: typeof tripId === 'string' ? tripId : '',

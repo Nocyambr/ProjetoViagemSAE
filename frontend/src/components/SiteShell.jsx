@@ -43,7 +43,7 @@ export default function SiteShell({ user, hasTrips, onLogout, children }) {
             {user && (
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/80 py-1 pl-1.5 pr-3 text-xs font-semibold text-slate-200">
                 <img
-                  src={teacher ? '/images/teachers/prof-carlos.jpg' : '/images/sesi-excursao.jpg'}
+                  src={teacher ? '/images/teachers/prof-ricardo.jpg' : '/images/sesi-excursao.jpg'}
                   alt={user.name}
                   className="h-6 w-6 rounded-full border border-slate-600 object-cover"
                 />

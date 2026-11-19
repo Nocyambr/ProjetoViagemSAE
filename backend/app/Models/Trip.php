@@ -57,7 +57,7 @@ class Trip extends Model
             'busName' => $this->bus_name,
             'teacherName' => $this->teacher_name,
             'teacherContact' => $this->teacher_contact,
-            'teacherPhoto' => $this->teacher_photo ?: '/images/teachers/prof-carlos.jpg',
+            'teacherPhoto' => $this->teacher_photo ?: '/images/teachers/prof-ricardo.jpg',
             'status' => $this->status,
             'started' => $started,
             'startedAt' => $this->started_at?->toIso8601String(),

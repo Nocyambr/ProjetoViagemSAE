@@ -246,7 +246,7 @@ export default function Schedule({ user, portal }) {
 
               <div className="sm:col-span-2">
                 <p className="mb-2 text-sm font-medium text-slate-200">Professor responsável</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:max-w-md">
                   {TEACHER_DIRECTORY.map((profile) => {
                     const selected = draft.teacherName === profile.name;
                     return (
@@ -271,9 +271,9 @@ export default function Schedule({ user, portal }) {
                         <img
                           src={profile.photo}
                           alt={profile.name}
-                          className="h-16 w-16 rounded-full border border-slate-600 object-cover"
+                          className="h-20 w-20 rounded-full border border-slate-600 object-cover object-top"
                         />
-                        <span className="mt-2 text-xs font-bold leading-tight">{profile.name}</span>
+                        <span className="mt-2 text-sm font-bold leading-tight">{profile.name}</span>
                       </button>
                     );
                   })}

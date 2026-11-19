@@ -80,7 +80,7 @@ export default function Teachers({ user, portal }) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:max-w-lg">
               {TEACHER_DIRECTORY.map((profile) => {
                 const isMain = activeTrip?.teacherName?.toLowerCase() === profile.name.toLowerCase();
                 const isExtra = teachers.some(
@@ -104,7 +104,7 @@ export default function Teachers({ user, portal }) {
                     <img
                       src={profile.photo}
                       alt={profile.name}
-                      className="h-24 w-24 rounded-2xl border border-slate-600 object-cover transition-transform group-hover:scale-105"
+                      className="h-24 w-24 rounded-2xl border border-slate-600 object-cover object-top transition-transform group-hover:scale-105"
                     />
                     <span className="mt-3 text-sm font-bold leading-snug">{profile.name}</span>
                     <span className="mt-1 text-xs text-slate-400">{profile.role}</span>
@@ -139,7 +139,7 @@ export default function Teachers({ user, portal }) {
                   <img
                     src={photo}
                     alt={trip.teacherName}
-                    className="h-16 w-16 shrink-0 rounded-2xl border border-slate-600 object-cover"
+                    className="h-16 w-16 shrink-0 rounded-2xl border border-slate-600 object-cover object-top"
                   />
                   <div className="min-w-0">
                     <span className="inline-block rounded-full border border-emerald-700/60 bg-emerald-950/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
@@ -162,7 +162,7 @@ export default function Teachers({ user, portal }) {
                   <img
                     src={resolveTeacherPhoto(member.name, member.photo)}
                     alt={member.name}
-                    className="h-16 w-16 shrink-0 rounded-2xl border border-slate-600 object-cover"
+                    className="h-16 w-16 shrink-0 rounded-2xl border border-slate-600 object-cover object-top"
                   />
                   <div className="min-w-0">
                     <span className="inline-block rounded-full border border-slate-700 bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-slate-300">

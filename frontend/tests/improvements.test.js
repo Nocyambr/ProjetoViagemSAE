@@ -61,26 +61,27 @@ test('fotos são vinculadas à viagem, listadas, removidas e limpas ao excluir v
 test('equipe de professores usa fotos do catálogo e alterna vínculo na viagem', () => {
   const store = memoryStorage(TEACHERS_STORAGE_KEY);
   assert.deepEqual(loadTeachers(store).teachers, []);
-  assert.ok(TEACHER_DIRECTORY.length >= 4);
-  assert.equal(resolveTeacherPhoto('Profa. Ana Paula'), '/images/teachers/profa-ana.jpg');
+  assert.equal(TEACHER_DIRECTORY.length, 2);
+  assert.equal(resolveTeacherPhoto('Ricardo'), '/images/teachers/prof-ricardo.jpg');
+  assert.equal(resolveTeacherPhoto('André'), '/images/teachers/prof-andre.jpg');
 
   const added = addTeacher(
     [],
-    { name: 'Profa. Ana Paula', role: 'Biologia', contact: 'ana@sesi.br', tripId: 't1' },
+    { name: 'Ricardo', role: 'Professor', contact: '', tripId: 't1' },
     store,
     () => 'm1',
   );
   assert.equal(added.error, '');
-  assert.equal(added.teachers[0].photo, '/images/teachers/profa-ana.jpg');
+  assert.equal(added.teachers[0].photo, '/images/teachers/prof-ricardo.jpg');
   assert.equal(loadTeachers(store).teachers.length, 1);
 
-  const toggledOff = toggleTripTeacher(added.teachers, TEACHER_DIRECTORY[1], 't1', store);
+  const toggledOff = toggleTripTeacher(added.teachers, TEACHER_DIRECTORY[0], 't1', store);
   assert.equal(toggledOff.added, false);
   assert.equal(toggledOff.teachers.length, 0);
 
-  const toggledOn = toggleTripTeacher(toggledOff.teachers, TEACHER_DIRECTORY[2], 't1', store, () => 'm2');
+  const toggledOn = toggleTripTeacher(toggledOff.teachers, TEACHER_DIRECTORY[1], 't1', store, () => 'm2');
   assert.equal(toggledOn.added, true);
-  assert.equal(toggledOn.teachers[0].photo, '/images/teachers/prof-rafael.jpg');
+  assert.equal(toggledOn.teachers[0].photo, '/images/teachers/prof-andre.jpg');
 
   const removed = deleteTeacher(toggledOn.teachers, 'm2', store);
   assert.equal(removed.teachers.length, 0);
