@@ -1,4 +1,9 @@
-import { resolveTeacherPhoto, TEACHER_DIRECTORY } from './teachers.js';
+import {
+  formatTeacherNames,
+  parseTeacherNames,
+  resolveTeacherPhoto,
+  TEACHER_DIRECTORY,
+} from './teachers.js';
 
 export const SESI_CERQUILHO = {
   name: 'SESI Cerquilho - SP',
@@ -52,9 +57,10 @@ function defaultLocation() {
 export function normalizeTripFields(trip) {
   const destination = typeof trip.destination === 'string' ? trip.destination.trim() : '';
   const busName = typeof trip.busName === 'string' ? trip.busName.trim() : '';
-  const teacherName = typeof trip.teacherName === 'string' ? trip.teacherName.trim() : '';
+  const teacherNames = parseTeacherNames(trip.teacherNames ?? trip.teacherName);
+  const teacherName = formatTeacherNames(teacherNames);
   const teacherContact = typeof trip.teacherContact === 'string' ? trip.teacherContact.trim() : '';
-  const teacherPhoto = resolveTeacherPhoto(teacherName || TEACHER_DIRECTORY[0].name, trip.teacherPhoto);
+  const teacherPhoto = resolveTeacherPhoto(teacherNames[0] || TEACHER_DIRECTORY[0].name, trip.teacherPhoto);
   const status = BUS_STATUSES.some((s) => s.value === trip.status) ? trip.status : 'planned';
   const startedAt = typeof trip.startedAt === 'string' && trip.startedAt ? trip.startedAt : null;
   const started = Boolean(trip.started || startedAt !== null || status !== 'planned');
@@ -70,7 +76,8 @@ export function normalizeTripFields(trip) {
     departure: trip.departure,
     arrival: trip.arrival,
     busName: busName || 'Ônibus fretado',
-    teacherName: teacherName || TEACHER_DIRECTORY[0].name,
+    teacherNames,
+    teacherName,
     teacherContact,
     teacherPhoto,
     status,
@@ -160,7 +167,8 @@ export const EMPTY_DRAFT = {
   departure: '07:00',
   arrival: '18:00',
   busName: '',
-  teacherName: TEACHER_DIRECTORY[0].name,
+  teacherNames: TEACHER_DIRECTORY.map((t) => t.name),
+  teacherName: formatTeacherNames(TEACHER_DIRECTORY.map((t) => t.name)),
   teacherContact: TEACHER_DIRECTORY[0].contact,
   teacherPhoto: TEACHER_DIRECTORY[0].photo,
 };
@@ -172,7 +180,6 @@ export const TRIP_PRESETS = [
     departure: '07:30',
     arrival: '17:30',
     busName: 'Ônibus 01 · Fretado SESI',
-    teacherIndex: 0,
   },
   {
     title: 'Visita Técnica 2ºB - Planetário Ibirapuera',
@@ -180,7 +187,6 @@ export const TRIP_PRESETS = [
     departure: '07:00',
     arrival: '18:00',
     busName: 'Ônibus 02 · Fretado SESI',
-    teacherIndex: 1,
   },
   {
     title: 'Estudo do Meio 1ºA - Zoológico de São Paulo',
@@ -188,16 +194,15 @@ export const TRIP_PRESETS = [
     departure: '08:00',
     arrival: '17:00',
     busName: 'Ônibus 03 · Fretado SESI',
-    teacherIndex: 0,
   },
 ];
 
 /**
- * Builds a complete, valid trip draft pre-filled with realistic SESI excursion data.
+ * Builds a complete, valid trip draft pre-filled with realistic SESI excursion data and both teachers selected.
  */
 export function buildAutoFillTripDraft(index = 0, today = localToday()) {
   const preset = TRIP_PRESETS[Math.abs(Number(index) || 0) % TRIP_PRESETS.length];
-  const teacher = TEACHER_DIRECTORY[preset.teacherIndex] ?? TEACHER_DIRECTORY[0];
+  const allNames = TEACHER_DIRECTORY.map((t) => t.name);
   return {
     title: preset.title,
     destination: preset.destination,
@@ -205,9 +210,10 @@ export function buildAutoFillTripDraft(index = 0, today = localToday()) {
     departure: preset.departure,
     arrival: preset.arrival,
     busName: preset.busName,
-    teacherName: teacher.name,
-    teacherContact: teacher.contact,
-    teacherPhoto: teacher.photo,
+    teacherNames: allNames,
+    teacherName: formatTeacherNames(allNames),
+    teacherContact: TEACHER_DIRECTORY[0].contact,
+    teacherPhoto: TEACHER_DIRECTORY[0].photo,
   };
 }
 

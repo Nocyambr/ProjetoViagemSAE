@@ -114,14 +114,14 @@ test('ordena por data e saída sem alterar a lista original', () => {
   assert.deepEqual(trips.map((trip) => trip.id), ['a', 'b', 'c']);
 });
 
-test('buildAutoFillTripDraft preenche rascunhos válidos alternando professores e destinos', () => {
+test('buildAutoFillTripDraft preenche rascunhos válidos com os dois professores selecionados', () => {
   const first = buildAutoFillTripDraft(0, '2026-11-25');
   const second = buildAutoFillTripDraft(1, '2026-11-25');
   assert.equal(validateTrip(first), '');
   assert.equal(validateTrip(second), '');
   assert.equal(first.date, '2026-11-25');
-  assert.equal(first.teacherName, 'Ricardo');
-  assert.equal(first.teacherPhoto, '/images/teachers/prof-ricardo.jpg');
-  assert.equal(second.teacherName, 'André');
-  assert.equal(second.teacherPhoto, '/images/teachers/prof-andre.jpg');
+  assert.deepEqual(first.teacherNames, ['Ricardo', 'André']);
+  assert.equal(first.teacherName, 'Ricardo e André');
+  assert.deepEqual(second.teacherNames, ['Ricardo', 'André']);
+  assert.equal(second.teacherName, 'Ricardo e André');
 });

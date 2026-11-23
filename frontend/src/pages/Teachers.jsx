@@ -3,6 +3,7 @@ import { isTeacher } from '../lib/auth.js';
 import {
   deleteTeacher,
   resolveTeacherPhoto,
+  resolveTripTeachers,
   TEACHER_DIRECTORY,
   toggleTripTeacher,
 } from '../lib/teachers.js';
@@ -82,7 +83,10 @@ export default function Teachers({ user, portal }) {
 
             <div className="grid grid-cols-2 gap-4 sm:max-w-lg">
               {TEACHER_DIRECTORY.map((profile) => {
-                const isMain = activeTrip?.teacherName?.toLowerCase() === profile.name.toLowerCase();
+                const activeTripTeachers = activeTrip ? resolveTripTeachers(activeTrip) : [];
+                const isMain = activeTripTeachers.some(
+                  (prof) => prof.name.toLowerCase() === profile.name.toLowerCase(),
+                );
                 const isExtra = teachers.some(
                   (m) => m.tripId === tripId && m.name.toLowerCase() === profile.name.toLowerCase(),
                 );
@@ -129,31 +133,37 @@ export default function Teachers({ user, portal }) {
         <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
           <h2 className="mb-4 text-lg font-bold text-slate-100">Equipe das viagens</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            {trips.map((trip) => {
-              const photo = resolveTeacherPhoto(trip.teacherName, trip.teacherPhoto);
-              return (
+            {trips.flatMap((trip) =>
+              resolveTripTeachers(trip).map((prof) => (
                 <article
-                  key={`trip-${trip.id}`}
+                  key={`trip-${trip.id}-${prof.id}`}
                   className="flex items-center gap-4 rounded-2xl border border-slate-700/70 bg-slate-800/70 p-4"
                 >
                   <img
-                    src={photo}
-                    alt={trip.teacherName}
+                    src={prof.photo}
+                    alt={prof.name}
                     className="h-16 w-16 shrink-0 rounded-2xl border border-slate-600 object-cover object-top"
                   />
                   <div className="min-w-0">
                     <span className="inline-block rounded-full border border-emerald-700/60 bg-emerald-950/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
                       {trip.title}
                     </span>
-                    <h3 className="mt-1 truncate font-bold text-slate-100">{trip.teacherName}</h3>
-                    <p className="text-xs text-slate-300">Responsável principal</p>
-                    {trip.teacherContact && <p className="mt-0.5 truncate text-xs text-slate-400">{trip.teacherContact}</p>}
+                    <h3 className="mt-1 truncate font-bold text-slate-100">{prof.name}</h3>
+                    <p className="text-xs text-slate-300">Responsável da viagem</p>
                   </div>
                 </article>
-              );
-            })}
+              )),
+            )}
 
-            {teachers.map((member) => (
+            {teachers
+              .filter((member) => {
+                const trip = trips.find((t) => t.id === member.tripId);
+                if (!trip) return true;
+                return !resolveTripTeachers(trip).some(
+                  (prof) => prof.name.toLowerCase() === member.name.toLowerCase(),
+                );
+              })
+              .map((member) => (
               <article
                 key={member.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4"

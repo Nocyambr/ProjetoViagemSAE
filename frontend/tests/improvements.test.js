@@ -5,8 +5,11 @@ import { addPhoto, deletePhoto, loadPhotos, PHOTOS_STORAGE_KEY, removePhotosByTr
 import {
   addTeacher,
   deleteTeacher,
+  formatTeacherNames,
   loadTeachers,
+  parseTeacherNames,
   resolveTeacherPhoto,
+  resolveTripTeachers,
   TEACHER_DIRECTORY,
   TEACHERS_STORAGE_KEY,
   toggleTripTeacher,
@@ -64,6 +67,9 @@ test('equipe de professores usa fotos do catálogo e alterna vínculo na viagem'
   assert.equal(TEACHER_DIRECTORY.length, 2);
   assert.equal(resolveTeacherPhoto('Ricardo'), '/images/teachers/prof-ricardo.jpg');
   assert.equal(resolveTeacherPhoto('André'), '/images/teachers/prof-andre.jpg');
+  assert.deepEqual(parseTeacherNames('Ricardo e André'), ['Ricardo', 'André']);
+  assert.equal(formatTeacherNames(['Ricardo', 'André']), 'Ricardo e André');
+  assert.equal(resolveTripTeachers({ teacherName: 'Ricardo e André' }).length, 2);
 
   const added = addTeacher(
     [],

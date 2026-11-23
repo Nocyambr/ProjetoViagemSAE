@@ -15,7 +15,13 @@ import {
   startTripApi,
   updateTripApi,
 } from '../lib/api.js';
-import { resolveTeacherPhoto, TEACHER_DIRECTORY } from '../lib/teachers.js';
+import {
+  formatTeacherNames,
+  parseTeacherNames,
+  resolveTeacherPhoto,
+  resolveTripTeachers,
+  TEACHER_DIRECTORY,
+} from '../lib/teachers.js';
 import { removePhotosByTrip } from '../lib/photos.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
 import Icon from '../components/Icon.jsx';
@@ -102,6 +108,7 @@ export default function Schedule({ user, portal }) {
   }
 
   function startEdit(trip) {
+    const names = parseTeacherNames(trip.teacherNames ?? trip.teacherName);
     setEditingId(trip.id);
     setDraft({
       title: trip.title,
@@ -110,9 +117,10 @@ export default function Schedule({ user, portal }) {
       departure: trip.departure,
       arrival: trip.arrival,
       busName: trip.busName || '',
-      teacherName: trip.teacherName || TEACHER_DIRECTORY[0].name,
+      teacherNames: names,
+      teacherName: formatTeacherNames(names),
       teacherContact: trip.teacherContact || TEACHER_DIRECTORY[0].contact,
-      teacherPhoto: resolveTeacherPhoto(trip.teacherName, trip.teacherPhoto),
+      teacherPhoto: resolveTeacherPhoto(names[0], trip.teacherPhoto),
     });
     setError('');
     setNotice('');
@@ -129,7 +137,44 @@ export default function Schedule({ user, portal }) {
     setDraft(nextDraft);
     setPresetIndex((prev) => prev + 1);
     setError('');
-    setNotice('Informações preenchidas automaticamente.');
+    setNotice('Informações preenchidas automaticamente com os dois professores selecionados.');
+  }
+
+  const selectedTeachers = parseTeacherNames(draft.teacherNames ?? draft.teacherName);
+
+  function toggleDraftTeacher(profile) {
+    const exists = selectedTeachers.includes(profile.name);
+    let nextNames;
+    if (exists) {
+      if (selectedTeachers.length <= 1) {
+        setNotice('Pelo menos um professor responsável deve permanecer selecionado.');
+        return;
+      }
+      nextNames = selectedTeachers.filter((name) => name !== profile.name);
+    } else {
+      nextNames = TEACHER_DIRECTORY.map((t) => t.name).filter(
+        (name) => selectedTeachers.includes(name) || name === profile.name,
+      );
+    }
+    const primary = TEACHER_DIRECTORY.find((t) => t.name === nextNames[0]) ?? TEACHER_DIRECTORY[0];
+    setDraft({
+      ...draft,
+      teacherNames: nextNames,
+      teacherName: formatTeacherNames(nextNames),
+      teacherContact: primary.contact,
+      teacherPhoto: primary.photo,
+    });
+  }
+
+  function selectAllTeachers() {
+    const allNames = TEACHER_DIRECTORY.map((t) => t.name);
+    setDraft({
+      ...draft,
+      teacherNames: allNames,
+      teacherName: formatTeacherNames(allNames),
+      teacherContact: TEACHER_DIRECTORY[0].contact,
+      teacherPhoto: TEACHER_DIRECTORY[0].photo,
+    });
   }
 
   async function handleDelete(trip) {
@@ -264,23 +309,32 @@ export default function Schedule({ user, portal }) {
               </label>
 
               <div className="sm:col-span-2">
-                <p className="mb-2 text-sm font-medium text-slate-200">Professor responsável</p>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-200">
+                    Professores responsáveis{' '}
+                    <span className="text-xs font-normal text-slate-400">
+                      ({selectedTeachers.length} de {TEACHER_DIRECTORY.length} selecionados)
+                    </span>
+                  </p>
+                  {selectedTeachers.length < TEACHER_DIRECTORY.length && (
+                    <button
+                      type="button"
+                      onClick={selectAllTeachers}
+                      className="text-xs font-bold text-emerald-300 underline hover:text-emerald-200"
+                    >
+                      Selecionar os dois
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-3 sm:max-w-md">
                   {TEACHER_DIRECTORY.map((profile) => {
-                    const selected = draft.teacherName === profile.name;
+                    const selected = selectedTeachers.includes(profile.name);
                     return (
                       <button
                         key={profile.id}
                         type="button"
                         aria-pressed={selected}
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            teacherName: profile.name,
-                            teacherContact: profile.contact,
-                            teacherPhoto: profile.photo,
-                          })
-                        }
+                        onClick={() => toggleDraftTeacher(profile)}
                         className={`flex flex-col items-center rounded-2xl border p-3 text-center transition-colors ${
                           selected
                             ? 'border-emerald-400 bg-emerald-950/60 text-white'
@@ -293,6 +347,13 @@ export default function Schedule({ user, portal }) {
                           className="h-20 w-20 rounded-full border border-slate-600 object-cover object-top"
                         />
                         <span className="mt-2 text-sm font-bold leading-tight">{profile.name}</span>
+                        <span
+                          className={`mt-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                            selected ? 'bg-emerald-700/70 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {selected ? 'Selecionado' : 'Selecionar'}
+                        </span>
                       </button>
                     );
                   })}
@@ -366,7 +427,7 @@ export default function Schedule({ user, portal }) {
           <ul className="space-y-4">
             {sortedTrips.map((trip) => {
               const inspected = inspectedLocations[trip.id];
-              const teacherPhoto = resolveTeacherPhoto(trip.teacherName, trip.teacherPhoto);
+              const tripTeachers = resolveTripTeachers(trip);
               return (
                 <li key={trip.id} className="border-b border-slate-800 pb-4">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -392,8 +453,17 @@ export default function Schedule({ user, portal }) {
                         {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
                       </p>
                       <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
-                        <img src={teacherPhoto} alt={trip.teacherName} className="h-6 w-6 rounded-full border border-slate-600 object-cover" />
-                        <span>{trip.teacherName} · {trip.busName}</span>
+                        <div className="flex -space-x-1.5">
+                          {tripTeachers.map((prof) => (
+                            <img
+                              key={prof.id}
+                              src={prof.photo}
+                              alt={prof.name}
+                              className="h-6 w-6 rounded-full border border-slate-600 object-cover object-top"
+                            />
+                          ))}
+                        </div>
+                        <span>{formatTeacherNames(tripTeachers.map((prof) => prof.name))} · {trip.busName}</span>
                       </div>
                     </div>
 

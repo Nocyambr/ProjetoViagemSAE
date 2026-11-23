@@ -21,12 +21,72 @@ export const TEACHER_DIRECTORY = [
  * Resolves a teacher's portrait photo URL from an explicit value or the directory.
  */
 export function resolveTeacherPhoto(name, explicitPhoto = '') {
-  if (typeof explicitPhoto === 'string' && explicitPhoto.trim()) return explicitPhoto.trim();
   const clean = typeof name === 'string' ? name.trim().toLowerCase() : '';
   const match = TEACHER_DIRECTORY.find(
-    (item) => clean === item.name.toLowerCase() || clean.includes(item.name.toLowerCase()),
+    (item) => clean === item.name.toLowerCase() || clean.startsWith(item.name.toLowerCase()),
+  ) ?? TEACHER_DIRECTORY.find(
+    (item) => clean.includes(item.name.toLowerCase()),
   );
-  return match?.photo ?? TEACHER_DIRECTORY[0].photo;
+  if (match) return match.photo;
+  if (typeof explicitPhoto === 'string' && explicitPhoto.trim()) return explicitPhoto.trim();
+  return TEACHER_DIRECTORY[0].photo;
+}
+
+/**
+ * Extracts canonical teacher names (1 or both) from an array or combined string.
+ */
+export function parseTeacherNames(value) {
+  if (Array.isArray(value)) {
+    const rawList = value.map((item) => (typeof item === 'string' ? item.trim().toLowerCase() : '')).filter(Boolean);
+    const matched = TEACHER_DIRECTORY.filter((item) =>
+      rawList.some((raw) => raw === item.name.toLowerCase() || raw.includes(item.name.toLowerCase())),
+    ).map((item) => item.name);
+    if (matched.length > 0) return matched;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const lower = value.trim().toLowerCase();
+    const matched = TEACHER_DIRECTORY.filter((item) => lower.includes(item.name.toLowerCase())).map(
+      (item) => item.name,
+    );
+    if (matched.length > 0) return matched;
+    return [value.trim()];
+  }
+
+  return TEACHER_DIRECTORY.map((item) => item.name);
+}
+
+/**
+ * Formats one or multiple teacher names into a display string (e.g. "Ricardo e André").
+ */
+export function formatTeacherNames(value) {
+  const names = parseTeacherNames(value);
+  if (names.length <= 1) return names[0] ?? TEACHER_DIRECTORY[0].name;
+  if (names.length === 2) return `${names[0]} e ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+}
+
+/**
+ * Returns the full directory profile objects for all teachers assigned to a trip.
+ */
+export function resolveTripTeachers(tripOrValue) {
+  const raw =
+    tripOrValue && typeof tripOrValue === 'object' && !Array.isArray(tripOrValue)
+      ? (tripOrValue.teacherNames ?? tripOrValue.teacherName)
+      : tripOrValue;
+  const names = parseTeacherNames(raw);
+  return names.map((name) => {
+    const found = TEACHER_DIRECTORY.find((item) => item.name.toLowerCase() === name.toLowerCase());
+    return (
+      found ?? {
+        id: `prof-${name.toLowerCase()}`,
+        name,
+        role: 'Professor',
+        contact: '',
+        photo: resolveTeacherPhoto(name),
+      }
+    );
+  });
 }
 
 /**
