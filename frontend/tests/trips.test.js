@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   addTrip,
+  buildAutoFillTripDraft,
   EMPTY_DRAFT,
   INITIAL_TRIPS,
   loadTrips,
@@ -111,4 +112,16 @@ test('ordena por data e saída sem alterar a lista original', () => {
   ];
   assert.deepEqual(sortTrips(trips).map((trip) => trip.id), ['c', 'b', 'a']);
   assert.deepEqual(trips.map((trip) => trip.id), ['a', 'b', 'c']);
+});
+
+test('buildAutoFillTripDraft preenche rascunhos válidos alternando professores e destinos', () => {
+  const first = buildAutoFillTripDraft(0, '2026-11-25');
+  const second = buildAutoFillTripDraft(1, '2026-11-25');
+  assert.equal(validateTrip(first), '');
+  assert.equal(validateTrip(second), '');
+  assert.equal(first.date, '2026-11-25');
+  assert.equal(first.teacherName, 'Ricardo');
+  assert.equal(first.teacherPhoto, '/images/teachers/prof-ricardo.jpg');
+  assert.equal(second.teacherName, 'André');
+  assert.equal(second.teacherPhoto, '/images/teachers/prof-andre.jpg');
 });

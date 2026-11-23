@@ -31,6 +31,14 @@ export default function Register({ onLogin }) {
     navigate('/home', { replace: true });
   };
 
+  const handleAutoFill = () => {
+    setName('Lucas Oliveira');
+    setUsername('aluno.lucas');
+    setPassword('senai0000');
+    setConfirmPassword('senai0000');
+    setError('');
+  };
+
   return (
     <main className="relative isolate flex min-h-dvh items-center justify-center overflow-x-clip bg-[#0b1116] p-3 text-slate-100 sm:p-6">
       <img
@@ -44,16 +52,25 @@ export default function Register({ onLogin }) {
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1116]/80 via-[#0b1116]/75 to-[#0b1116]/95" />
 
       <section className="w-full max-w-lg rounded-3xl border border-slate-700/80 bg-[#131d24]/95 p-5 shadow-2xl backdrop-blur-md sm:p-7">
-        <header className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 shadow-md shadow-red-950/50">
-            <span className="text-sm font-black tracking-tight text-white">S.A.E</span>
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600 shadow-md shadow-red-950/50">
+              <span className="text-sm font-black tracking-tight text-white">S.A.E</span>
+            </div>
+            <div>
+              <h1 className="text-[clamp(1.125rem,1rem+0.6vw,1.375rem)] font-bold leading-tight text-slate-100">
+                Criar conta
+              </h1>
+              <p className="text-xs text-slate-400">SESI Aventura Educativa</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-[clamp(1.125rem,1rem+0.6vw,1.375rem)] font-bold leading-tight text-slate-100">
-              Criar conta
-            </h1>
-            <p className="text-xs text-slate-400">SESI Aventura Educativa</p>
-          </div>
+          <button
+            type="button"
+            onClick={handleAutoFill}
+            className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
+          >
+            Preencher automaticamente
+          </button>
         </header>
 
         <form onSubmit={handleRegister} className="space-y-3.5">

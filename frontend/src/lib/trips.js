@@ -165,6 +165,52 @@ export const EMPTY_DRAFT = {
   teacherPhoto: TEACHER_DIRECTORY[0].photo,
 };
 
+export const TRIP_PRESETS = [
+  {
+    title: 'Excursão 3ºA - Museu Catavento',
+    destination: 'Museu Catavento - São Paulo, SP',
+    departure: '07:30',
+    arrival: '17:30',
+    busName: 'Ônibus 01 · Fretado SESI',
+    teacherIndex: 0,
+  },
+  {
+    title: 'Visita Técnica 2ºB - Planetário Ibirapuera',
+    destination: 'Parque Ibirapuera - São Paulo, SP',
+    departure: '07:00',
+    arrival: '18:00',
+    busName: 'Ônibus 02 · Fretado SESI',
+    teacherIndex: 1,
+  },
+  {
+    title: 'Estudo do Meio 1ºA - Zoológico de São Paulo',
+    destination: 'Zoológico de São Paulo - SP',
+    departure: '08:00',
+    arrival: '17:00',
+    busName: 'Ônibus 03 · Fretado SESI',
+    teacherIndex: 0,
+  },
+];
+
+/**
+ * Builds a complete, valid trip draft pre-filled with realistic SESI excursion data.
+ */
+export function buildAutoFillTripDraft(index = 0, today = localToday()) {
+  const preset = TRIP_PRESETS[Math.abs(Number(index) || 0) % TRIP_PRESETS.length];
+  const teacher = TEACHER_DIRECTORY[preset.teacherIndex] ?? TEACHER_DIRECTORY[0];
+  return {
+    title: preset.title,
+    destination: preset.destination,
+    date: today,
+    departure: preset.departure,
+    arrival: preset.arrival,
+    busName: preset.busName,
+    teacherName: teacher.name,
+    teacherContact: teacher.contact,
+    teacherPhoto: teacher.photo,
+  };
+}
+
 /**
  * Validates, creates, and persists a new trip.
  */

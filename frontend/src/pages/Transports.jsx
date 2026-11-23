@@ -98,6 +98,18 @@ export default function Transports({ user, portal }) {
     setNotice('Coordenadas de SESI Cerquilho - SP aplicadas. Clique em salvar.');
   }
 
+  function handleAutoFillLocation() {
+    setStatus('transit');
+    setBusName(activeTrip?.busName || 'Ônibus 01 · Fretado SESI');
+    setLabel('Rodovia Castello Branco (SP-280) · Km 78 - Itu/SP');
+    setAddress('Rodovia Presidente Castello Branco, Km 78 - Itu - SP');
+    setLat('-23.26410');
+    setLng('-47.29920');
+    setProgress(50);
+    setError('');
+    setNotice('Informações de localização preenchidas automaticamente. Clique em salvar.');
+  }
+
   function captureGps() {
     if (!navigator.geolocation) {
       setError('Geolocalização não suportada neste navegador.');
@@ -249,6 +261,13 @@ export default function Transports({ user, portal }) {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-rose-400">Atualizar localização do ônibus</h2>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleAutoFillLocation}
+                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
+                >
+                  Preencher automaticamente
+                </button>
                 <button
                   type="button"
                   onClick={applySesiCerquilho}

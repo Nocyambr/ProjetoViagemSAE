@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
 import {
+  buildAutoFillTripDraft,
   EMPTY_DRAFT,
   filterTrips,
   localToday,
@@ -24,6 +25,7 @@ export default function Schedule({ user, portal }) {
   const { trips, tripsError, photos } = portal;
 
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [presetIndex, setPresetIndex] = useState(0);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState(tripsError);
   const [notice, setNotice] = useState('');
@@ -122,6 +124,14 @@ export default function Schedule({ user, portal }) {
     setError('');
   }
 
+  function handleAutoFill() {
+    const nextDraft = buildAutoFillTripDraft(presetIndex);
+    setDraft(nextDraft);
+    setPresetIndex((prev) => prev + 1);
+    setError('');
+    setNotice('Informações preenchidas automaticamente.');
+  }
+
   async function handleDelete(trip) {
     if (!teacher) return;
     if (window.confirm(`Excluir a viagem "${trip.title}"?`)) {
@@ -164,15 +174,24 @@ export default function Schedule({ user, portal }) {
 
         {teacher && (
           <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-5 sm:p-8 shadow-sm mb-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-rose-400 font-bold">
                 {editingId ? 'Editar viagem' : 'Criar nova viagem'}
               </h2>
-              {editingId && (
-                <button type="button" onClick={cancelEdit} className="text-xs font-semibold text-slate-300 underline hover:text-white">
-                  Cancelar edição
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAutoFill}
+                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
+                >
+                  Preencher automaticamente
                 </button>
-              )}
+                {editingId && (
+                  <button type="button" onClick={cancelEdit} className="text-xs font-semibold text-slate-300 underline hover:text-white">
+                    Cancelar edição
+                  </button>
+                )}
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">

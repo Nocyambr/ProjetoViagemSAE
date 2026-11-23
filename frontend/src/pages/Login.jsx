@@ -22,6 +22,12 @@ export default function Login({ onLogin }) {
     navigate('/home', { replace: true });
   };
 
+  const handleAutoFill = (role) => {
+    setUsername(role === 'teacher' ? 'professor' : 'usuario1');
+    setPassword('senai00');
+    setError('');
+  };
+
   return (
     <main className="relative isolate flex min-h-dvh flex-col items-center justify-center bg-[#0b1116] p-4 py-8 text-slate-100">
       <img src="/images/sesi-cerquilho-hero.jpg" alt="" width="1408" height="768" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />
@@ -102,9 +108,29 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-slate-700/80 bg-[#0b1116]/70 p-2.5 text-left">
+            <p className="mb-2 text-xs font-semibold text-slate-400">Preencher automaticamente</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleAutoFill('teacher')}
+                className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
+              >
+                Professor
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAutoFill('student')}
+                className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 transition-colors hover:bg-slate-700"
+              >
+                Aluno / Pais
+              </button>
+            </div>
+          </div>
+
           <button
             type="submit"
-            className="mt-2 min-h-12 w-full rounded-xl bg-red-600 py-2.5 font-bold text-white transition-colors hover:bg-red-500"
+            className="mt-1 min-h-12 w-full rounded-xl bg-red-600 py-2.5 font-bold text-white transition-colors hover:bg-red-500"
           >
             ENTRAR
           </button>
