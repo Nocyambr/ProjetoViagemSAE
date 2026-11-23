@@ -143,8 +143,6 @@ export default function Transports({ user, portal }) {
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentLoc.label)}`
       : '';
 
-  const busX = 48 + (currentLoc.progress / 100) * 504;
-
   return (
     <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
@@ -198,33 +196,6 @@ export default function Transports({ user, portal }) {
             </div>
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4">
-            <svg viewBox="0 0 600 130" className="w-full h-auto" role="img" aria-label={`Progresso do trajeto: ${currentLoc.progress}%`}>
-              <defs>
-                <linearGradient id="routeGrad" gradientUnits="userSpaceOnUse" x1="48" y1="0" x2="552" y2="0">
-                  <stop offset="0%" stopColor="#10b981" />
-                  <stop offset="100%" stopColor="#f6c45b" />
-                </linearGradient>
-              </defs>
-              <line x1="48" y1="68" x2="552" y2="68" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
-              <line x1="48" y1="68" x2={busX} y2="68" stroke="url(#routeGrad)" strokeWidth="8" strokeLinecap="round" />
-              <circle cx="48" cy="68" r="9" fill="#10b981" stroke="#0b1116" strokeWidth="3" />
-              <circle cx="552" cy="68" r="9" fill="#f6c45b" stroke="#0b1116" strokeWidth="3" />
-              <g transform={`translate(${busX}, 40)`}>
-                <rect x="-22" y="-15" width="44" height="24" rx="6" fill="#dc2626" stroke="#f8fafc" strokeWidth="2" />
-                <rect x="-17" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
-                <rect x="-5" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
-                <rect x="7" y="-11" width="10" height="8" rx="1.5" fill="#e2e8f0" />
-                <circle cx="-12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
-                <circle cx="12" cy="10" r="4" fill="#0f172a" stroke="#f8fafc" strokeWidth="1.5" />
-              </g>
-              <text x="48" y="102" textAnchor="start" fill="#cbd5e1" fontSize="12" fontWeight="600">SESI Cerquilho - SP</text>
-              <text x="552" y="102" textAnchor="end" fill="#f6c45b" fontSize="12" fontWeight="600">
-                {activeTrip.destination || 'Destino'}
-              </text>
-            </svg>
-          </div>
-
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
               <p className="text-xs font-semibold text-slate-400">Localização atual</p>
@@ -238,15 +209,18 @@ export default function Transports({ user, portal }) {
             </div>
             <div className="flex flex-col justify-between rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
               <div>
-                <p className="text-xs font-semibold text-slate-400">Trajeto</p>
-                <p className="mt-1 text-2xl font-extrabold text-emerald-300">{currentLoc.progress}%</p>
+                <p className="text-xs font-semibold text-slate-400">Origem e destino</p>
+                <p className="mt-1 text-sm font-bold text-slate-100">Saída: SESI Cerquilho - SP</p>
+                {activeTrip.destination && (
+                  <p className="mt-1 text-xs text-slate-300">Destino: {activeTrip.destination}</p>
+                )}
               </div>
               {mapUrl && (
                 <a
                   href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-rose-400 underline hover:text-rose-300"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-rose-400 underline hover:text-rose-300"
                 >
                   <span>Abrir no Google Maps</span>
                   <Icon name="arrow-up-right" className="h-3.5 w-3.5 shrink-0" />
@@ -319,18 +293,6 @@ export default function Transports({ user, portal }) {
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder="Ex.: SESI Cerquilho - SP (Rua Antônio Modanez, 111)"
                   className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
-                Progresso do trajeto ({progress}%)
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={progress}
-                  onChange={(e) => setProgress(Number(e.target.value))}
-                  className="mt-2 block w-full accent-emerald-500"
                 />
               </label>
 

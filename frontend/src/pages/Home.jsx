@@ -187,7 +187,6 @@ export default function Home({ user, portal }) {
             <section className="rounded-2xl border border-emerald-600/70 bg-[#131d24] p-5 text-slate-100 shadow-sm" aria-live="polite">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-bold text-emerald-300">Localização atual</h2>
-                <span className="text-xs text-slate-400">{selectedLocation.currentLocation.progress}%</span>
               </div>
               <p className="mt-2 text-base font-bold text-white">{selectedLocation.origin?.name || 'SESI Cerquilho - SP'}</p>
               <p className="mt-1 text-xs text-slate-300">{selectedLocation.currentLocation.address || selectedLocation.origin?.address}</p>

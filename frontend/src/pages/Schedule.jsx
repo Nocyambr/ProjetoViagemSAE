@@ -520,7 +520,7 @@ export default function Schedule({ user, portal }) {
                             <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
                           )}
                           <p className="text-xs text-slate-400">
-                            GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng} · {inspected.currentLocation.progress}% concluído
+                            GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng}
                           </p>
                         </div>
                       )}
