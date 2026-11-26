@@ -2,6 +2,8 @@
 
 Aplicação web para organização e acompanhamento de viagens educativas do **SESI Cerquilho - SP (CE 428)**.
 
+- **Site hospedado (Cloudflare Workers):** [https://projeto-viagem-sae.mayconarea42.workers.dev](https://projeto-viagem-sae.mayconarea42.workers.dev)
+
 ## Visão geral da arquitetura
 
 - **Frontend (`frontend/`):** React 19, Vite 8, React Router 7 e Tailwind CSS 4.
