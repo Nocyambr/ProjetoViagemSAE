@@ -2,9 +2,6 @@
 
 namespace App\Services;
 
-/**
- * Provides the integrated current origin location for SESI Cerquilho - SP.
- */
 class SesiLocationService
 {
     public const UNIT_NAME = 'SESI Cerquilho - SP';
@@ -16,9 +13,6 @@ class SesiLocationService
     public const LAT = '-23.16345';
     public const LNG = '-47.76580';
 
-    /**
-     * Returns the canonical SESI Cerquilho-SP geolocation payload.
-     */
     public function currentOrigin(): array
     {
         return [

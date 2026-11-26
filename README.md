@@ -1,4 +1,4 @@
-# ProjetoViagemSAE — SESI Aventura Educativa
+# ProjetoViagemSAE - SESI Aventura Educativa
 
 Aplicação web para organização e acompanhamento de viagens educativas do **SESI Cerquilho - SP (CE 428)**.
 

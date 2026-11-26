@@ -1,7 +1,41 @@
 import { useEffect, useRef, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
 import { addPhoto, compressImageFile, deletePhoto } from '../lib/photos.js';
+import { BTN_PRIMARY, CARD_CLASS, INPUT_CLASS, LABEL_CLASS, SELECT_CLASS } from '../lib/styles.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
+
+function PhotoDialog({ dialogRef, photo, tripTitle, onClose }) {
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="photo-dialog-title"
+      className="m-auto max-h-[90dvh] w-[min(92vw,760px)] rounded-3xl border border-slate-700 bg-[#131d24] p-4 text-slate-100 shadow-2xl"
+    >
+      {photo && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <h2 id="photo-dialog-title" className="text-base font-bold text-slate-100">
+              {photo.caption || tripTitle}
+            </h2>
+            <button
+              type="button"
+              autoFocus
+              onClick={onClose}
+              className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+            >
+              Fechar
+            </button>
+          </div>
+          <img
+            src={photo.dataUrl}
+            alt={photo.caption || 'Foto ampliada da viagem'}
+            className="max-h-[72dvh] w-full rounded-2xl bg-[#0b1116] object-contain"
+          />
+        </div>
+      )}
+    </dialog>
+  );
+}
 
 export default function Photos({ user, portal }) {
   const teacher = isTeacher(user);
@@ -43,7 +77,7 @@ export default function Photos({ user, portal }) {
     const onClose = () => setSelectedPhoto(null);
     dialog.addEventListener('close', onClose);
 
-    // Fallback for browsers without native closedby="any" support.
+    // Fecha ao clicar fora em navegadores sem suporte a closedby="any"
     if (!('closedBy' in HTMLDialogElement.prototype)) {
       const onClick = (event) => {
         if (event.target !== dialog) return;
@@ -72,6 +106,7 @@ export default function Photos({ user, portal }) {
   async function handleUpload(e) {
     e.preventDefault();
     if (!teacher) return;
+
     const files = Array.from(fileInputRef.current?.files ?? []);
     if (!files.length) {
       setError('Selecione pelo menos uma imagem.');
@@ -84,6 +119,7 @@ export default function Photos({ user, portal }) {
 
     let currentPhotos = photos;
     let postedCount = 0;
+
     try {
       for (const file of files) {
         const dataUrl = await compressImageFile(file);
@@ -100,6 +136,7 @@ export default function Photos({ user, portal }) {
         currentPhotos = res.photos;
         postedCount += 1;
       }
+
       if (postedCount > 0) {
         setCaption('');
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -117,10 +154,10 @@ export default function Photos({ user, portal }) {
     const res = deletePhoto(photos, photo.id);
     if (res.error) {
       setError(res.error);
-    } else {
-      setNotice('Imagem removida.');
-      if (selectedPhoto?.id === photo.id) setSelectedPhoto(null);
+      return;
     }
+    setNotice('Imagem removida.');
+    if (selectedPhoto?.id === photo.id) setSelectedPhoto(null);
   }
 
   const tripName = (id) => trips.find((t) => t.id === id)?.title ?? 'Viagem';
@@ -155,23 +192,19 @@ export default function Photos({ user, portal }) {
         )}
 
         {teacher && (
-          <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+          <section className={CARD_CLASS}>
             <h2 className="mb-4 text-lg font-bold text-rose-400">Postar novas imagens</h2>
             <form onSubmit={handleUpload} className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-200">
+              <label className={LABEL_CLASS}>
                 Viagem
-                <select
-                  value={tripId}
-                  onChange={(e) => setTripId(e.target.value)}
-                  className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 focus:border-emerald-400 focus:outline-none"
-                >
+                <select value={tripId} onChange={(e) => setTripId(e.target.value)} className={SELECT_CLASS}>
                   {trips.map((t) => (
                     <option key={t.id} value={t.id}>{t.title}</option>
                   ))}
                 </select>
               </label>
 
-              <label className="text-sm font-medium text-slate-200">
+              <label className={LABEL_CLASS}>
                 Legenda (opcional)
                 <input
                   type="text"
@@ -179,11 +212,11 @@ export default function Photos({ user, portal }) {
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Ex.: Chegada ao parque"
-                  className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                  className={INPUT_CLASS}
                 />
               </label>
 
-              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
+              <label className={`${LABEL_CLASS} sm:col-span-2`}>
                 Selecionar fotos
                 <input
                   ref={fileInputRef}
@@ -199,7 +232,7 @@ export default function Photos({ user, portal }) {
               <button
                 type="submit"
                 disabled={uploading}
-                className="rounded-xl bg-red-600 px-6 py-3 font-bold text-white hover:bg-red-500 disabled:opacity-50 sm:col-span-2"
+                className={`${BTN_PRIMARY} disabled:opacity-50 sm:col-span-2`}
               >
                 {uploading ? 'Enviando...' : 'Publicar imagens'}
               </button>
@@ -207,16 +240,21 @@ export default function Photos({ user, portal }) {
           </section>
         )}
 
-        <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+        <section className={CARD_CLASS}>
           <h2 className="mb-4 text-lg font-bold text-slate-100">Galeria ({visiblePhotos.length})</h2>
           {visiblePhotos.length === 0 ? (
             <p className="rounded-xl border border-slate-700 bg-slate-800/70 p-5 text-sm text-slate-300">
-              {teacher ? 'Nenhuma imagem postada ainda. Use o formulário acima para publicar fotos.' : 'O professor ainda não postou fotos desta viagem.'}
+              {teacher
+                ? 'Nenhuma imagem postada ainda. Use o formulário acima para publicar fotos.'
+                : 'O professor ainda não postou fotos desta viagem.'}
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {visiblePhotos.map((photo) => (
-                <article key={photo.id} className="flex flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1116]">
+                <article
+                  key={photo.id}
+                  className="flex flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1116]"
+                >
                   <button
                     type="button"
                     onClick={() => setSelectedPhoto(photo)}
@@ -229,15 +267,19 @@ export default function Photos({ user, portal }) {
                       className="h-48 w-full object-cover transition-transform duration-200 group-hover:scale-105"
                     />
                   </button>
+
                   <div className="flex flex-1 flex-col justify-between p-3.5">
                     <div>
-                      <span className="inline-block rounded-full bg-emerald-950/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300 border border-emerald-700/60">
+                      <span className="inline-block rounded-full border border-emerald-700/60 bg-emerald-950/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
                         {tripName(photo.tripId)}
                       </span>
                       {photo.caption && <p className="mt-2 text-sm text-slate-200">{photo.caption}</p>}
                     </div>
+
                     <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-                      <span>{new Date(photo.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      <span>
+                        {new Date(photo.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
                       {teacher && (
                         <button
                           type="button"
@@ -256,34 +298,12 @@ export default function Photos({ user, portal }) {
         </section>
       </div>
 
-      <dialog
-        ref={dialogRef}
-        aria-labelledby="photo-dialog-title"
-        className="m-auto max-h-[90dvh] w-[min(92vw,760px)] rounded-3xl border border-slate-700 bg-[#131d24] p-4 text-slate-100 shadow-2xl"
-      >
-        {selectedPhoto && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <h2 id="photo-dialog-title" className="text-base font-bold text-slate-100">
-                {selectedPhoto.caption || tripName(selectedPhoto.tripId)}
-              </h2>
-              <button
-                type="button"
-                autofocus
-                onClick={() => dialogRef.current?.close()}
-                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
-              >
-                Fechar
-              </button>
-            </div>
-            <img
-              src={selectedPhoto.dataUrl}
-              alt={selectedPhoto.caption || 'Foto ampliada da viagem'}
-              className="max-h-[72dvh] w-full rounded-2xl object-contain bg-[#0b1116]"
-            />
-          </div>
-        )}
-      </dialog>
+      <PhotoDialog
+        dialogRef={dialogRef}
+        photo={selectedPhoto}
+        tripTitle={selectedPhoto ? tripName(selectedPhoto.tripId) : ''}
+        onClose={() => dialogRef.current?.close()}
+      />
     </div>
   );
 }

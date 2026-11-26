@@ -62,7 +62,7 @@ test('startTripApi e fetchTripLocationApi integram SESI Cerquilho-SP somente apÃ
     started: false,
   };
 
-  // Locked before teacher starts the trip
+  // Bloqueado antes do professor iniciar a viagem
   const locked = await fetchTripLocationApi(baseTrip, async () => ({
     ok: false,
     status: 423,
@@ -71,7 +71,7 @@ test('startTripApi e fetchTripLocationApi integram SESI Cerquilho-SP somente apÃ
   assert.equal(locked.started, false);
   assert.match(locked.error, /nÃ£o foi iniciada/);
 
-  // Teacher starts trip -> backend publishes SESI Cerquilho-SP
+  // Professor inicia a viagem e API retorna origem SESI Cerquilho - SP
   const startedRes = await startTripApi([baseTrip], 't-1', async (url, opts) => {
     assert.equal(url, '/api/trips/t-1/start');
     assert.equal(opts.method, 'POST');
@@ -94,7 +94,7 @@ test('startTripApi e fetchTripLocationApi integram SESI Cerquilho-SP somente apÃ
   assert.equal(startedRes.trips[0].started, true);
   assert.equal(startedRes.origin.name, 'SESI Cerquilho - SP');
 
-  // Clicking started trip returns SESI Cerquilho-SP from API
+  // Consulta da viagem iniciada retorna localizaÃ§Ã£o pela API
   const locationRes = await fetchTripLocationApi(startedRes.trips[0], async (url) => {
     assert.equal(url, '/api/trips/t-1/location');
     return {

@@ -45,19 +45,19 @@ class TripLocationApiTest extends TestCase
 
         $tripId = $created->json('trip.id');
 
-        // Locked before the teacher starts the trip
+        // Bloqueado antes do professor iniciar a viagem
         $this->getJson("/api/trips/{$tripId}/location")
             ->assertStatus(423)
             ->assertJsonPath('started', false);
 
-        // Teacher starts the trip
+        // Professor inicia a viagem
         $this->postJson("/api/trips/{$tripId}/start")
             ->assertOk()
             ->assertJsonPath('trip.started', true)
             ->assertJsonPath('trip.status', 'transit')
             ->assertJsonPath('origin.name', 'SESI Cerquilho - SP');
 
-        // Clicking the started trip returns SESI Cerquilho-SP location from API
+        // Consulta da viagem iniciada retorna a origem no SESI Cerquilho - SP
         $this->getJson("/api/trips/{$tripId}/location")
             ->assertOk()
             ->assertJsonPath('started', true)
@@ -65,7 +65,7 @@ class TripLocationApiTest extends TestCase
             ->assertJsonPath('currentLocation.lat', '-23.16345')
             ->assertJsonPath('currentLocation.lng', '-47.76580');
 
-        // Teacher updates bus location along the route
+        // Professor atualiza a localização do ônibus no trajeto
         $this->patchJson("/api/trips/{$tripId}/location", [
             'status' => 'transit',
             'busName' => 'Ônibus 01',

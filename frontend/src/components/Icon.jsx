@@ -36,12 +36,10 @@ const ICONS = {
   ),
 };
 
-/**
- * Renders a crisp decorative vector SVG icon inheriting the surrounding text color.
- */
 export default function Icon({ name, className = 'h-4 w-4 shrink-0' }) {
   const paths = ICONS[name];
   if (!paths) return null;
+
   return (
     <svg
       viewBox="0 0 24 24"

@@ -1,7 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authenticate } from '../lib/auth.js';
+import { BTN_EMERALD, BTN_SECONDARY } from '../lib/styles.js';
 import Icon from '../components/Icon.jsx';
+
+const FIELD_CLASS =
+  'min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -10,31 +14,39 @@ export default function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e) => {
+  function handleLogin(e) {
     e.preventDefault();
     const result = authenticate(username, password);
     if (result.error) {
       setError(result.error);
       return;
     }
+
     setError('');
     onLogin?.(result.user);
     navigate('/home', { replace: true });
-  };
+  }
 
-  const handleAutoFill = (role) => {
+  function handleAutoFill(role) {
     setUsername(role === 'teacher' ? 'professor' : 'usuario1');
     setPassword('senai00');
     setError('');
-  };
+  }
 
   return (
     <main className="relative isolate flex min-h-dvh flex-col items-center justify-center bg-[#0b1116] p-4 py-8 text-slate-100">
-      <img src="/images/sesi-cerquilho-hero.jpg" alt="" width="1408" height="768" fetchPriority="high" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35" />
+      <img
+        src="/images/sesi-cerquilho-hero.jpg"
+        alt=""
+        width="1408"
+        height="768"
+        fetchPriority="high"
+        className="absolute inset-0 -z-20 h-full w-full object-cover opacity-35"
+      />
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0b1116]/80 via-[#0b1116]/70 to-[#0b1116]/95" />
 
       <div className="mb-6 text-center text-white">
-        <h1 className="text-3xl font-bold tracking-widest italic">SESI</h1>
+        <h1 className="text-3xl font-bold italic tracking-widest">SESI</h1>
         <p className="text-sm text-slate-200">LOGIN</p>
         <p className="text-xs text-slate-300">SESI Aventura Educativa</p>
       </div>
@@ -44,7 +56,10 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           {error && (
-            <p role="alert" className="flex items-center justify-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 p-3 text-sm font-medium text-rose-200">
+            <p
+              role="alert"
+              className="flex items-center justify-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 p-3 text-sm font-medium text-rose-200"
+            >
               <Icon name="alert" />
               <span>{error}</span>
             </p>
@@ -71,7 +86,7 @@ export default function Login({ onLogin }) {
                 if (error) setError('');
               }}
               placeholder="usuario1 ou professor"
-              className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -94,7 +109,7 @@ export default function Login({ onLogin }) {
                   if (error) setError('');
                 }}
                 placeholder="Digite sua senha"
-                className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] py-2.5 pl-3.5 pr-20 text-base text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                className={`${FIELD_CLASS} pr-20`}
               />
               <button
                 type="button"
@@ -111,18 +126,10 @@ export default function Login({ onLogin }) {
           <div className="rounded-2xl border border-slate-700/80 bg-[#0b1116]/70 p-2.5 text-left">
             <p className="mb-2 text-xs font-semibold text-slate-400">Preencher automaticamente</p>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleAutoFill('teacher')}
-                className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
-              >
+              <button type="button" onClick={() => handleAutoFill('teacher')} className={BTN_EMERALD}>
                 Professor
               </button>
-              <button
-                type="button"
-                onClick={() => handleAutoFill('student')}
-                className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 transition-colors hover:bg-slate-700"
-              >
+              <button type="button" onClick={() => handleAutoFill('student')} className={BTN_SECONDARY}>
                 Aluno / Pais
               </button>
             </div>
@@ -138,7 +145,9 @@ export default function Login({ onLogin }) {
 
         <div className="mt-5 flex justify-center gap-1 text-xs text-slate-400">
           <span>Não possui conta?</span>
-          <Link to="/register" className="text-rose-400 hover:text-rose-300 hover:underline">Cadastre-se</Link>
+          <Link to="/register" className="text-rose-400 hover:text-rose-300 hover:underline">
+            Cadastre-se
+          </Link>
         </div>
       </section>
     </main>

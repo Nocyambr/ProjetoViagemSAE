@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react';
 import { isTeacher } from '../lib/auth.js';
 import { BUS_STATUSES, SESI_CERQUILHO, statusLabel } from '../lib/trips.js';
 import { fetchTripLocationApi, startTripApi, updateTripLocationApi } from '../lib/api.js';
+import {
+  BTN_EMERALD,
+  BTN_PRIMARY,
+  BTN_SECONDARY,
+  CARD_CLASS,
+  INPUT_CLASS,
+  LABEL_CLASS,
+  SELECT_CLASS,
+} from '../lib/styles.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -14,6 +23,116 @@ function formatTime(iso) {
   }
 }
 
+function buildGoogleMapsUrl(location) {
+  if (location.lat && location.lng) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(`${location.lat},${location.lng}`)}`;
+  }
+  if (location.label) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.label)}`;
+  }
+  return '';
+}
+
+function LocationForm({
+  fields,
+  onChange,
+  onSubmit,
+  onAutoFill,
+  onApplySesi,
+  onCaptureGps,
+  gpsLoading,
+  error,
+}) {
+  return (
+    <section className={CARD_CLASS}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-rose-400">Atualizar localização do ônibus</h2>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={onAutoFill} className={BTN_EMERALD}>
+            Preencher automaticamente
+          </button>
+          <button type="button" onClick={onApplySesi} className={BTN_SECONDARY}>
+            Definir SESI Cerquilho - SP
+          </button>
+          <button
+            type="button"
+            onClick={onCaptureGps}
+            disabled={gpsLoading}
+            className={`${BTN_EMERALD} disabled:opacity-50`}
+          >
+            {gpsLoading ? 'Obtendo GPS...' : 'Usar GPS atual'}
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+        <label className={LABEL_CLASS}>
+          Status da viagem
+          <select
+            value={fields.status}
+            onChange={(e) => onChange('status', e.target.value)}
+            className={SELECT_CLASS}
+          >
+            {BUS_STATUSES.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className={LABEL_CLASS}>
+          Ônibus / Placa
+          <input
+            type="text"
+            value={fields.busName}
+            onChange={(e) => onChange('busName', e.target.value)}
+            className={INPUT_CLASS}
+          />
+        </label>
+
+        <label className={`${LABEL_CLASS} sm:col-span-2`}>
+          Localização / Ponto de referência
+          <input
+            type="text"
+            required
+            value={fields.label}
+            onChange={(e) => onChange('label', e.target.value)}
+            placeholder="Ex.: SESI Cerquilho - SP (Rua Antônio Modanez, 111)"
+            className={INPUT_CLASS}
+          />
+        </label>
+
+        <label className={LABEL_CLASS}>
+          Latitude
+          <input
+            type="text"
+            value={fields.lat}
+            onChange={(e) => onChange('lat', e.target.value)}
+            placeholder="-23.16345"
+            className={INPUT_CLASS}
+          />
+        </label>
+
+        <label className={LABEL_CLASS}>
+          Longitude
+          <input
+            type="text"
+            value={fields.lng}
+            onChange={(e) => onChange('lng', e.target.value)}
+            placeholder="-47.76580"
+            className={INPUT_CLASS}
+          />
+        </label>
+
+        {error && <p role="alert" className="text-sm text-rose-300 sm:col-span-2">{error}</p>}
+
+        <button type="submit" className={`${BTN_PRIMARY} sm:col-span-2`}>
+          Salvar localização
+        </button>
+      </form>
+    </section>
+  );
+}
+
 export default function Transports({ user, portal }) {
   const teacher = isTeacher(user);
   const { trips } = portal;
@@ -21,13 +140,15 @@ export default function Transports({ user, portal }) {
   const [selectedId, setSelectedId] = useState(() => trips[0]?.id ?? '');
   const activeTrip = trips.find((t) => t.id === selectedId) ?? trips[0] ?? null;
 
-  const [status, setStatus] = useState(activeTrip?.status ?? 'planned');
-  const [busName, setBusName] = useState(activeTrip?.busName ?? '');
-  const [label, setLabel] = useState(activeTrip?.busLocation?.label ?? SESI_CERQUILHO.label);
-  const [address, setAddress] = useState(activeTrip?.busLocation?.address ?? SESI_CERQUILHO.address);
-  const [lat, setLat] = useState(activeTrip?.busLocation?.lat ?? SESI_CERQUILHO.lat);
-  const [lng, setLng] = useState(activeTrip?.busLocation?.lng ?? SESI_CERQUILHO.lng);
-  const [progress, setProgress] = useState(activeTrip?.busLocation?.progress ?? 0);
+  const [fields, setFields] = useState({
+    status: activeTrip?.status ?? 'planned',
+    busName: activeTrip?.busName ?? '',
+    label: activeTrip?.busLocation?.label ?? SESI_CERQUILHO.label,
+    address: activeTrip?.busLocation?.address ?? SESI_CERQUILHO.address,
+    lat: activeTrip?.busLocation?.lat ?? SESI_CERQUILHO.lat,
+    lng: activeTrip?.busLocation?.lng ?? SESI_CERQUILHO.lng,
+    progress: activeTrip?.busLocation?.progress ?? 0,
+  });
   const [apiLocation, setApiLocation] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -35,14 +156,17 @@ export default function Transports({ user, portal }) {
 
   useEffect(() => {
     if (!activeTrip) return;
+
     setSelectedId(activeTrip.id);
-    setStatus(activeTrip.status);
-    setBusName(activeTrip.busName);
-    setLabel(activeTrip.busLocation.label);
-    setAddress(activeTrip.busLocation.address || SESI_CERQUILHO.address);
-    setLat(activeTrip.busLocation.lat);
-    setLng(activeTrip.busLocation.lng);
-    setProgress(activeTrip.busLocation.progress);
+    setFields({
+      status: activeTrip.status,
+      busName: activeTrip.busName,
+      label: activeTrip.busLocation.label,
+      address: activeTrip.busLocation.address || SESI_CERQUILHO.address,
+      lat: activeTrip.busLocation.lat,
+      lng: activeTrip.busLocation.lng,
+      progress: activeTrip.busLocation.progress,
+    });
 
     if (activeTrip.started) {
       fetchTripLocationApi(activeTrip).then((res) => {
@@ -60,8 +184,11 @@ export default function Transports({ user, portal }) {
   if (!teacher && activeTrip && !activeTrip.started) {
     return (
       <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
-        <div className="mx-auto max-w-2xl rounded-3xl border border-slate-800 bg-[#131d24] p-6 text-center shadow-sm sm:p-8">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-amber-300" aria-hidden="true">
+        <div className={`mx-auto max-w-2xl text-center ${CARD_CLASS}`}>
+          <div
+            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-amber-300"
+            aria-hidden="true"
+          >
             <Icon name="lock" className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold text-rose-400">Localização do Ônibus</h1>
@@ -71,6 +198,10 @@ export default function Transports({ user, portal }) {
         </div>
       </div>
     );
+  }
+
+  function updateField(name, value) {
+    setFields((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleStartNow() {
@@ -85,27 +216,32 @@ export default function Transports({ user, portal }) {
   async function handleSave(e) {
     e.preventDefault();
     if (!teacher || !activeTrip) return;
-    const res = await updateTripLocationApi(trips, activeTrip.id, { status, busName, label, address, lat, lng, progress });
+    const res = await updateTripLocationApi(trips, activeTrip.id, fields);
     setError(res.error);
     setNotice(res.error ? '' : 'Localização do ônibus atualizada via API.');
   }
 
   function applySesiCerquilho() {
-    setLabel(SESI_CERQUILHO.label);
-    setAddress(SESI_CERQUILHO.address);
-    setLat(SESI_CERQUILHO.lat);
-    setLng(SESI_CERQUILHO.lng);
+    setFields((prev) => ({
+      ...prev,
+      label: SESI_CERQUILHO.label,
+      address: SESI_CERQUILHO.address,
+      lat: SESI_CERQUILHO.lat,
+      lng: SESI_CERQUILHO.lng,
+    }));
     setNotice('Coordenadas de SESI Cerquilho - SP aplicadas. Clique em salvar.');
   }
 
   function handleAutoFillLocation() {
-    setStatus('transit');
-    setBusName(activeTrip?.busName || 'Ônibus 01 · Fretado SESI');
-    setLabel('Rodovia Castello Branco (SP-280) · Km 78 - Itu/SP');
-    setAddress('Rodovia Presidente Castello Branco, Km 78 - Itu - SP');
-    setLat('-23.26410');
-    setLng('-47.29920');
-    setProgress(50);
+    setFields({
+      status: 'transit',
+      busName: activeTrip?.busName || 'Ônibus 01 · Fretado SESI',
+      label: 'Rodovia Castello Branco (SP-280) · Km 78 - Itu/SP',
+      address: 'Rodovia Presidente Castello Branco, Km 78 - Itu - SP',
+      lat: '-23.26410',
+      lng: '-47.29920',
+      progress: 50,
+    });
     setError('');
     setNotice('Informações de localização preenchidas automaticamente. Clique em salvar.');
   }
@@ -115,15 +251,20 @@ export default function Transports({ user, portal }) {
       setError('Geolocalização não suportada neste navegador.');
       return;
     }
+
     setGpsLoading(true);
     setError('');
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const nextLat = pos.coords.latitude.toFixed(6);
         const nextLng = pos.coords.longitude.toFixed(6);
-        setLat(nextLat);
-        setLng(nextLng);
-        setLabel(`GPS capturado (${nextLat}, ${nextLng})`);
+        setFields((prev) => ({
+          ...prev,
+          lat: nextLat,
+          lng: nextLng,
+          label: `GPS capturado (${nextLat}, ${nextLng})`,
+        }));
         setGpsLoading(false);
         setNotice('Coordenadas GPS capturadas. Clique em salvar para publicar.');
       },
@@ -137,11 +278,7 @@ export default function Transports({ user, portal }) {
 
   const currentLoc = apiLocation?.currentLocation ?? activeTrip.busLocation;
   const hasCoords = Boolean(currentLoc.lat && currentLoc.lng);
-  const mapUrl = hasCoords
-    ? `https://www.google.com/maps?q=${encodeURIComponent(`${currentLoc.lat},${currentLoc.lng}`)}`
-    : currentLoc.label
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentLoc.label)}`
-      : '';
+  const mapUrl = buildGoogleMapsUrl(currentLoc);
 
   return (
     <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
@@ -170,7 +307,7 @@ export default function Transports({ user, portal }) {
           </p>
         )}
 
-        <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+        <section className={CARD_CLASS}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <span className="inline-block rounded-full border border-emerald-600/60 bg-emerald-950/80 px-3 py-1 text-xs font-bold text-emerald-300">
@@ -179,6 +316,7 @@ export default function Transports({ user, portal }) {
               <h2 className="mt-2 text-xl font-bold text-slate-100">{activeTrip.title}</h2>
               <p className="text-sm text-slate-400">{activeTrip.busName}</p>
             </div>
+
             <div className="flex flex-col items-end gap-2 text-right text-xs text-slate-400">
               {teacher && !activeTrip.started && (
                 <button
@@ -207,6 +345,7 @@ export default function Transports({ user, portal }) {
                 </p>
               )}
             </div>
+
             <div className="flex flex-col justify-between rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4">
               <div>
                 <p className="text-xs font-semibold text-slate-400">Origem e destino</p>
@@ -231,100 +370,16 @@ export default function Transports({ user, portal }) {
         </section>
 
         {teacher && (
-          <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-rose-400">Atualizar localização do ônibus</h2>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleAutoFillLocation}
-                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60"
-                >
-                  Preencher automaticamente
-                </button>
-                <button
-                  type="button"
-                  onClick={applySesiCerquilho}
-                  className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-100 hover:bg-slate-700"
-                >
-                  Definir SESI Cerquilho - SP
-                </button>
-                <button
-                  type="button"
-                  onClick={captureGps}
-                  disabled={gpsLoading}
-                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-4 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-900/60 disabled:opacity-50"
-                >
-                  {gpsLoading ? 'Obtendo GPS...' : 'Usar GPS atual'}
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-200">
-                Status da viagem
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 focus:border-emerald-400 focus:outline-none"
-                >
-                  {BUS_STATUSES.map((item) => (
-                    <option key={item.value} value={item.value}>{item.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="text-sm font-medium text-slate-200">
-                Ônibus / Placa
-                <input
-                  type="text"
-                  value={busName}
-                  onChange={(e) => setBusName(e.target.value)}
-                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 focus:border-emerald-400 focus:outline-none"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
-                Localização / Ponto de referência
-                <input
-                  type="text"
-                  required
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder="Ex.: SESI Cerquilho - SP (Rua Antônio Modanez, 111)"
-                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200">
-                Latitude
-                <input
-                  type="text"
-                  value={lat}
-                  onChange={(e) => setLat(e.target.value)}
-                  placeholder="-23.16345"
-                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200">
-                Longitude
-                <input
-                  type="text"
-                  value={lng}
-                  onChange={(e) => setLng(e.target.value)}
-                  placeholder="-47.76580"
-                  className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
-                />
-              </label>
-
-              {error && <p role="alert" className="text-sm text-rose-300 sm:col-span-2">{error}</p>}
-
-              <button type="submit" className="rounded-xl bg-red-600 px-6 py-3 font-bold text-white hover:bg-red-500 sm:col-span-2">
-                Salvar localização
-              </button>
-            </form>
-          </section>
+          <LocationForm
+            fields={fields}
+            onChange={updateField}
+            onSubmit={handleSave}
+            onAutoFill={handleAutoFillLocation}
+            onApplySesi={applySesiCerquilho}
+            onCaptureGps={captureGps}
+            gpsLoading={gpsLoading}
+            error={error}
+          />
         )}
       </div>
     </div>

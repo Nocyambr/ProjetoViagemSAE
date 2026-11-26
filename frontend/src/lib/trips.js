@@ -29,6 +29,43 @@ export const BUS_STATUSES = [
   { value: 'finished', label: 'Finalizada' },
 ];
 
+export const EMPTY_DRAFT = {
+  title: '',
+  destination: '',
+  date: '',
+  departure: '07:00',
+  arrival: '18:00',
+  busName: '',
+  teacherNames: TEACHER_DIRECTORY.map((t) => t.name),
+  teacherName: formatTeacherNames(TEACHER_DIRECTORY.map((t) => t.name)),
+  teacherContact: TEACHER_DIRECTORY[0].contact,
+  teacherPhoto: TEACHER_DIRECTORY[0].photo,
+};
+
+export const TRIP_PRESETS = [
+  {
+    title: 'Excursão 3ºA - Museu Catavento',
+    destination: 'Museu Catavento - São Paulo, SP',
+    departure: '07:30',
+    arrival: '17:30',
+    busName: 'Ônibus 01 · Fretado SESI',
+  },
+  {
+    title: 'Visita Técnica 2ºB - Planetário Ibirapuera',
+    destination: 'Parque Ibirapuera - São Paulo, SP',
+    departure: '07:00',
+    arrival: '18:00',
+    busName: 'Ônibus 02 · Fretado SESI',
+  },
+  {
+    title: 'Estudo do Meio 1ºA - Zoológico de São Paulo',
+    destination: 'Zoológico de São Paulo - SP',
+    departure: '08:00',
+    arrival: '17:00',
+    busName: 'Ônibus 03 · Fretado SESI',
+  },
+];
+
 export function statusLabel(status) {
   return BUS_STATUSES.find((item) => item.value === status)?.label ?? 'Aguardando início';
 }
@@ -94,9 +131,6 @@ export function normalizeTripFields(trip) {
   };
 }
 
-/**
- * Validates required trip fields and schedule order.
- */
 export function validateTrip(trip) {
   if (!trip || typeof trip !== 'object' || typeof trip.title !== 'string' || !trip.title.trim()) {
     return 'Informe o nome da viagem.';
@@ -108,25 +142,24 @@ export function validateTrip(trip) {
   return '';
 }
 
-/**
- * Loads saved trips from storage; starts empty until a teacher creates one.
- */
 export function loadTrips(storage) {
   try {
     const raw = (storage ?? globalThis.localStorage).getItem(STORAGE_KEY);
     if (raw === null) return { trips: [], error: '' };
+
     const saved = JSON.parse(raw);
     const ids = new Set();
-    if (
-      !Array.isArray(saved) ||
-      !saved.every((trip) => {
-        if (validateTrip(trip) || typeof trip.id !== 'string' || !trip.id.trim() || ids.has(trip.id)) return false;
+    const valid =
+      Array.isArray(saved) &&
+      saved.every((trip) => {
+        if (validateTrip(trip) || typeof trip.id !== 'string' || !trip.id.trim() || ids.has(trip.id)) {
+          return false;
+        }
         ids.add(trip.id);
         return true;
-      })
-    ) {
-      throw new Error('Invalid trips');
-    }
+      });
+    if (!valid) throw new Error('Dados inválidos');
+
     return { trips: saved.map(normalizeTripFields), error: '' };
   } catch {
     return {
@@ -136,9 +169,6 @@ export function loadTrips(storage) {
   }
 }
 
-/**
- * Persists trips to local storage and notifies listeners in the same tab.
- */
 export function saveTrips(trips, storage) {
   try {
     (storage ?? globalThis.localStorage).setItem(STORAGE_KEY, JSON.stringify(trips));
@@ -151,58 +181,19 @@ export function saveTrips(trips, storage) {
   }
 }
 
-/**
- * Sorts trips chronologically by date, departure, and title.
- */
 export function sortTrips(trips) {
   return [...trips].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.departure.localeCompare(b.departure) || a.title.localeCompare(b.title, 'pt-BR'),
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      a.departure.localeCompare(b.departure) ||
+      a.title.localeCompare(b.title, 'pt-BR'),
   );
 }
 
-export const EMPTY_DRAFT = {
-  title: '',
-  destination: '',
-  date: '',
-  departure: '07:00',
-  arrival: '18:00',
-  busName: '',
-  teacherNames: TEACHER_DIRECTORY.map((t) => t.name),
-  teacherName: formatTeacherNames(TEACHER_DIRECTORY.map((t) => t.name)),
-  teacherContact: TEACHER_DIRECTORY[0].contact,
-  teacherPhoto: TEACHER_DIRECTORY[0].photo,
-};
-
-export const TRIP_PRESETS = [
-  {
-    title: 'Excursão 3ºA - Museu Catavento',
-    destination: 'Museu Catavento - São Paulo, SP',
-    departure: '07:30',
-    arrival: '17:30',
-    busName: 'Ônibus 01 · Fretado SESI',
-  },
-  {
-    title: 'Visita Técnica 2ºB - Planetário Ibirapuera',
-    destination: 'Parque Ibirapuera - São Paulo, SP',
-    departure: '07:00',
-    arrival: '18:00',
-    busName: 'Ônibus 02 · Fretado SESI',
-  },
-  {
-    title: 'Estudo do Meio 1ºA - Zoológico de São Paulo',
-    destination: 'Zoológico de São Paulo - SP',
-    departure: '08:00',
-    arrival: '17:00',
-    busName: 'Ônibus 03 · Fretado SESI',
-  },
-];
-
-/**
- * Builds a complete, valid trip draft pre-filled with realistic SESI excursion data and both teachers selected.
- */
 export function buildAutoFillTripDraft(index = 0, today = localToday()) {
   const preset = TRIP_PRESETS[Math.abs(Number(index) || 0) % TRIP_PRESETS.length];
   const allNames = TEACHER_DIRECTORY.map((t) => t.name);
+
   return {
     title: preset.title,
     destination: preset.destination,
@@ -217,29 +208,26 @@ export function buildAutoFillTripDraft(index = 0, today = localToday()) {
   };
 }
 
-/**
- * Validates, creates, and persists a new trip.
- */
 export function addTrip(trips, draft, storage, createId = () => crypto.randomUUID()) {
   const error = validateTrip(draft);
   if (error) return { trips, draft, error };
+
   try {
     const created = normalizeTripFields({ ...draft, id: createId() });
     const next = [...trips, created];
     const saveError = saveTrips(next, storage);
     if (saveError) return { trips, draft, error: saveError };
+
     return { trips: next, draft: { ...EMPTY_DRAFT }, error: '' };
   } catch {
     return { trips, draft, error: 'Não foi possível criar a viagem. Tente novamente em um navegador atualizado.' };
   }
 }
 
-/**
- * Marks a trip as started by the teacher and sets the origin to SESI Cerquilho-SP.
- */
 export function startTrip(trips, tripId, storage) {
   const index = trips.findIndex((t) => t.id === tripId);
   if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+
   const now = new Date().toISOString();
   const updated = normalizeTripFields({
     ...trips[index],
@@ -251,40 +239,47 @@ export function startTrip(trips, tripId, storage) {
       updatedAt: now,
     },
   });
+
   const next = trips.map((t) => (t.id === tripId ? updated : t));
   const saveError = saveTrips(next, storage);
   if (saveError) return { trips, error: saveError };
+
   return { trips: next, error: '' };
 }
 
-/**
- * Updates an existing trip and persists the changes.
- */
 export function updateTrip(trips, tripId, updates, storage) {
   const index = trips.findIndex((t) => t.id === tripId);
   if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+
   const merged = { ...trips[index], ...updates, id: tripId };
   const error = validateTrip(merged);
   if (error) return { trips, error };
+
   const next = trips.map((t) => (t.id === tripId ? normalizeTripFields(merged) : t));
   const saveError = saveTrips(next, storage);
   if (saveError) return { trips, error: saveError };
+
   return { trips: next, error: '' };
 }
 
-/**
- * Updates bus status and live location metadata for a trip.
- */
-export function updateTripLocation(trips, tripId, { status, busName, label, address, lat, lng, progress }, storage) {
+export function updateTripLocation(
+  trips,
+  tripId,
+  { status, busName, label, address, lat, lng, progress },
+  storage,
+) {
   const index = trips.findIndex((t) => t.id === tripId);
   if (index === -1) return { trips, error: 'Viagem não encontrada.' };
+
   const current = trips[index];
   const nextStatus = BUS_STATUSES.some((s) => s.value === status) ? status : current.status;
   const cleanLabel = typeof label === 'string' ? label.trim() : '';
   if (!cleanLabel) return { trips, error: 'Informe a localização ou ponto de referência do ônibus.' };
 
   const progressNum = Number(progress);
-  const clampedProgress = Number.isFinite(progressNum) ? Math.min(100, Math.max(0, Math.round(progressNum))) : current.busLocation.progress;
+  const clampedProgress = Number.isFinite(progressNum)
+    ? Math.min(100, Math.max(0, Math.round(progressNum)))
+    : current.busLocation.progress;
   const now = new Date().toISOString();
   const started = current.started || nextStatus !== 'planned';
 
@@ -307,29 +302,30 @@ export function updateTripLocation(trips, tripId, { status, busName, label, addr
   const next = trips.map((t) => (t.id === tripId ? updated : t));
   const saveError = saveTrips(next, storage);
   if (saveError) return { trips, error: saveError };
+
   return { trips: next, error: '' };
 }
 
-/**
- * Removes a trip by id and persists the remaining list.
- */
 export function removeTrip(trips, tripId, storage) {
   const next = trips.filter((t) => t.id !== tripId);
   const saveError = saveTrips(next, storage);
   if (saveError) return { trips, error: saveError };
+
   return { trips: next, error: '' };
 }
 
 export function localToday(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-/**
- * Filters and sorts trips by accent-insensitive title/destination search and date period.
- */
 export function filterTrips(trips, query = '', period = 'all', today = localToday()) {
-  const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const normalize = (value) =>
+    value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
   const search = normalize(query.trim());
+
   return sortTrips(trips).filter(
     (trip) =>
       (normalize(trip.title).includes(search) || normalize(trip.destination || '').includes(search)) &&

@@ -7,7 +7,16 @@ import {
   TEACHER_DIRECTORY,
   toggleTripTeacher,
 } from '../lib/teachers.js';
+import { CARD_CLASS } from '../lib/styles.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
+
+function isExtraMemberVisible(member, trips) {
+  const trip = trips.find((t) => t.id === member.tripId);
+  if (!trip) return true;
+  return !resolveTripTeachers(trip).some(
+    (prof) => prof.name.toLowerCase() === member.name.toLowerCase(),
+  );
+}
 
 export default function Teachers({ user, portal }) {
   const teacher = isTeacher(user);
@@ -49,6 +58,8 @@ export default function Teachers({ user, portal }) {
 
   const tripName = (id) => trips.find((t) => t.id === id)?.title ?? 'Geral';
   const activeTrip = trips.find((t) => t.id === tripId) ?? trips[0];
+  const activeTripTeachers = activeTrip ? resolveTripTeachers(activeTrip) : [];
+  const extraMembers = teachers.filter((member) => isExtraMemberVisible(member, trips));
 
   return (
     <div className="min-h-full bg-[#0b1116] p-4 text-slate-100 sm:p-8">
@@ -62,7 +73,7 @@ export default function Teachers({ user, portal }) {
         )}
 
         {teacher && (
-          <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+          <section className={CARD_CLASS}>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-bold text-rose-400">Selecionar professores pela foto</h2>
               {trips.length > 1 && (
@@ -83,7 +94,6 @@ export default function Teachers({ user, portal }) {
 
             <div className="grid grid-cols-2 gap-4 sm:max-w-lg">
               {TEACHER_DIRECTORY.map((profile) => {
-                const activeTripTeachers = activeTrip ? resolveTripTeachers(activeTrip) : [];
                 const isMain = activeTripTeachers.some(
                   (prof) => prof.name.toLowerCase() === profile.name.toLowerCase(),
                 );
@@ -114,9 +124,7 @@ export default function Teachers({ user, portal }) {
                     <span className="mt-1 text-xs text-slate-400">{profile.role}</span>
                     <span
                       className={`mt-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        selected
-                          ? 'bg-emerald-700/70 text-emerald-100'
-                          : 'bg-slate-800 text-slate-300'
+                        selected ? 'bg-emerald-700/70 text-emerald-100' : 'bg-slate-800 text-slate-300'
                       }`}
                     >
                       {isMain ? 'Principal da viagem' : isExtra ? 'Na equipe' : 'Selecionar'}
@@ -130,7 +138,7 @@ export default function Teachers({ user, portal }) {
           </section>
         )}
 
-        <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-6 shadow-sm sm:p-8">
+        <section className={CARD_CLASS}>
           <h2 className="mb-4 text-lg font-bold text-slate-100">Equipe das viagens</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {trips.flatMap((trip) =>
@@ -155,15 +163,7 @@ export default function Teachers({ user, portal }) {
               )),
             )}
 
-            {teachers
-              .filter((member) => {
-                const trip = trips.find((t) => t.id === member.tripId);
-                if (!trip) return true;
-                return !resolveTripTeachers(trip).some(
-                  (prof) => prof.name.toLowerCase() === member.name.toLowerCase(),
-                );
-              })
-              .map((member) => (
+            {extraMembers.map((member) => (
               <article
                 key={member.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700/70 bg-slate-800/50 p-4"

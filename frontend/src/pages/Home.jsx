@@ -5,6 +5,39 @@ import { filterTrips, statusLabel } from '../lib/trips.js';
 import { fetchTripLocationApi, startTripApi } from '../lib/api.js';
 import Icon from '../components/Icon.jsx';
 
+function LocationSummary({ location }) {
+  const { origin, currentLocation } = location;
+  const showCustomLabel = currentLocation.label && currentLocation.label !== origin?.label;
+
+  return (
+    <section
+      className="rounded-2xl border border-emerald-600/70 bg-[#131d24] p-5 text-slate-100 shadow-sm"
+      aria-live="polite"
+    >
+      <h2 className="text-sm font-bold text-emerald-300">Localização atual</h2>
+      <p className="mt-2 text-base font-bold text-white">{origin?.name || 'SESI Cerquilho - SP'}</p>
+      <p className="mt-1 text-xs text-slate-300">{currentLocation.address || origin?.address}</p>
+
+      {showCustomLabel && (
+        <p className="mt-2 text-sm font-medium text-emerald-200">{currentLocation.label}</p>
+      )}
+      {currentLocation.lat && currentLocation.lng && (
+        <p className="mt-1 text-xs text-slate-400">
+          GPS: {currentLocation.lat}, {currentLocation.lng}
+        </p>
+      )}
+
+      <Link
+        to="/locomocoes"
+        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 underline hover:text-rose-300"
+      >
+        <span>Abrir mapa</span>
+        <Icon name="arrow-right" className="h-3.5 w-3.5 shrink-0" />
+      </Link>
+    </section>
+  );
+}
+
 export default function Home({ user, portal }) {
   const teacher = isTeacher(user);
   const { trips, tripsError, photos } = portal;
@@ -22,6 +55,7 @@ export default function Home({ user, portal }) {
     setLocationNotice('');
     const result = await fetchTripLocationApi(trip);
     setLoadingLocation(false);
+
     if (!result.started) {
       setSelectedLocation(null);
       setLocationNotice(result.error);
@@ -36,6 +70,7 @@ export default function Home({ user, portal }) {
       setLocationNotice(result.error);
       return;
     }
+
     const updatedTrip = result.trips.find((t) => t.id === trip.id);
     if (updatedTrip) {
       await handleTripClick(updatedTrip);
@@ -43,35 +78,20 @@ export default function Home({ user, portal }) {
   }
 
   const cards = [
-    {
-      to: '/locomocoes',
-      title: 'Localização do Ônibus',
-      image: '/images/sesi-onibus.jpg',
-      locked: !hasTrips,
-    },
-    {
-      to: '/fotos',
-      title: 'Fotos',
-      image: '/images/sesi-excursao.jpg',
-      locked: !hasTrips,
-    },
+    { to: '/locomocoes', title: 'Localização do Ônibus', image: '/images/sesi-onibus.jpg', locked: !hasTrips },
+    { to: '/fotos', title: 'Fotos', image: '/images/sesi-excursao.jpg', locked: !hasTrips },
     {
       to: '/data-horarios',
       title: teacher ? 'Configurar Viagens' : 'Cronograma',
       image: '/images/sesi-escola-patio.jpg',
       locked: !teacher && !hasTrips,
     },
-    {
-      to: '/professores',
-      title: 'Professores Responsáveis',
-      image: '/images/sesi-professores.jpg',
-      locked: !hasTrips,
-    },
+    { to: '/professores', title: 'Professores Responsáveis', image: '/images/sesi-professores.jpg', locked: !hasTrips },
   ];
 
   return (
-    <div className="min-h-full bg-[#0b1116] text-slate-100 font-sans">
-      <div className="w-full max-w-6xl mx-auto mt-4 px-4">
+    <div className="min-h-full bg-[#0b1116] font-sans text-slate-100">
+      <div className="mx-auto mt-4 w-full max-w-6xl px-4">
         <section className="creative-hero" aria-labelledby="aventura-title">
           <div className="creative-hero-art">
             <img
@@ -82,17 +102,24 @@ export default function Home({ user, portal }) {
               fetchPriority="high"
             />
           </div>
+
           <div className="creative-hero-copy">
             <h1 id="aventura-title">Viagens SESI Cerquilho</h1>
             <div className="mt-4 flex flex-wrap gap-3">
               {teacher ? (
                 <>
-                  <Link to="/data-horarios" className="inline-flex items-center gap-2 rounded-xl bg-[#f6c45b] px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm hover:bg-[#ffda8d]">
+                  <Link
+                    to="/data-horarios"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#f6c45b] px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm hover:bg-[#ffda8d]"
+                  >
                     <span>{hasTrips ? 'Gerenciar viagens' : 'Configurar viagem'}</span>
                     <Icon name="arrow-up-right" />
                   </Link>
                   {hasTrips && (
-                    <Link to="/locomocoes" className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+                    <Link
+                      to="/locomocoes"
+                      className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"
+                    >
                       Atualizar ônibus
                     </Link>
                   )}
@@ -102,7 +129,9 @@ export default function Home({ user, portal }) {
                   <Link
                     to={hasTrips ? '/locomocoes' : '/home'}
                     className={`inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm ${
-                      hasTrips ? 'bg-[#f6c45b] text-emerald-950 hover:bg-[#ffda8d]' : 'border border-slate-600 bg-slate-800/90 text-slate-300'
+                      hasTrips
+                        ? 'bg-[#f6c45b] text-emerald-950 hover:bg-[#ffda8d]'
+                        : 'border border-slate-600 bg-slate-800/90 text-slate-300'
                     }`}
                   >
                     {!hasTrips && <Icon name="lock" />}
@@ -110,7 +139,10 @@ export default function Home({ user, portal }) {
                     {hasTrips && <Icon name="arrow-up-right" />}
                   </Link>
                   {hasTrips && (
-                    <Link to="/fotos" className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
+                    <Link
+                      to="/fotos"
+                      className="rounded-xl border border-white/50 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"
+                    >
                       Ver fotos
                     </Link>
                   )}
@@ -121,7 +153,7 @@ export default function Home({ user, portal }) {
         </section>
       </div>
 
-      <div className="w-full max-w-6xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mx-auto mt-6 grid w-full max-w-6xl grid-cols-1 gap-6 px-4 md:grid-cols-3">
         <div className="flex flex-col gap-6">
           <section className="rounded-2xl border border-emerald-800/60 bg-[#0a2e25] p-6 text-white shadow-sm">
             <h2 className="text-xl font-bold">
@@ -131,7 +163,9 @@ export default function Home({ user, portal }) {
             {activeTrip ? (
               <div className="mt-3 space-y-2 text-sm text-emerald-100">
                 {activeTrip.destination && <p>Destino: {activeTrip.destination}</p>}
-                <p>{`${activeTrip.date.split('-').reverse().join('/')} · ${activeTrip.departure} – ${activeTrip.arrival}`}</p>
+                <p>
+                  {`${activeTrip.date.split('-').reverse().join('/')} · ${activeTrip.departure} - ${activeTrip.arrival}`}
+                </p>
                 <p className="inline-block rounded-full border border-emerald-700/60 bg-emerald-900/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-200">
                   {activeTrip.started ? `Iniciada · ${statusLabel(activeTrip.status)}` : 'Aguardando início'}
                 </p>
@@ -167,7 +201,10 @@ export default function Home({ user, portal }) {
               )}
 
               {teacher && !activeTrip && (
-                <Link to="/data-horarios" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50">
+                <Link
+                  to="/data-horarios"
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-950 hover:bg-emerald-50"
+                >
                   <span>Criar viagem</span>
                   <Icon name="arrow-right" />
                 </Link>
@@ -183,30 +220,10 @@ export default function Home({ user, portal }) {
             </p>
           )}
 
-          {selectedLocation && (
-            <section className="rounded-2xl border border-emerald-600/70 bg-[#131d24] p-5 text-slate-100 shadow-sm" aria-live="polite">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-bold text-emerald-300">Localização atual</h2>
-              </div>
-              <p className="mt-2 text-base font-bold text-white">{selectedLocation.origin?.name || 'SESI Cerquilho - SP'}</p>
-              <p className="mt-1 text-xs text-slate-300">{selectedLocation.currentLocation.address || selectedLocation.origin?.address}</p>
-              {selectedLocation.currentLocation.label && selectedLocation.currentLocation.label !== selectedLocation.origin?.label && (
-                <p className="mt-2 text-sm font-medium text-emerald-200">{selectedLocation.currentLocation.label}</p>
-              )}
-              {selectedLocation.currentLocation.lat && selectedLocation.currentLocation.lng && (
-                <p className="mt-1 text-xs text-slate-400">
-                  GPS: {selectedLocation.currentLocation.lat}, {selectedLocation.currentLocation.lng}
-                </p>
-              )}
-              <Link to="/locomocoes" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 underline hover:text-rose-300">
-                <span>Abrir mapa</span>
-                <Icon name="arrow-right" className="h-3.5 w-3.5 shrink-0" />
-              </Link>
-            </section>
-          )}
+          {selectedLocation && <LocationSummary location={selectedLocation} />}
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-6">
+        <div className="flex flex-col gap-6 md:col-span-2">
           {trips.length > 1 && (
             <section className="rounded-2xl border border-slate-800 bg-[#131d24] p-5">
               <h2 className="mb-3 text-base font-bold text-slate-100">Viagens</h2>
@@ -231,7 +248,7 @@ export default function Home({ user, portal }) {
             </section>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {cards.map((card) => (
               <Link
                 key={card.to}

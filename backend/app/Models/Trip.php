@@ -40,9 +40,6 @@ class Trip extends Model
         ];
     }
 
-    /**
-     * Serializes the trip model into the camelCase structure expected by the React client.
-     */
     public function toApiArray(): array
     {
         $started = $this->started_at !== null || $this->status !== 'planned';

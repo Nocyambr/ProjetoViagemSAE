@@ -1,7 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { registerAccount } from '../lib/auth.js';
+import { BTN_EMERALD } from '../lib/styles.js';
 import Icon from '../components/Icon.jsx';
+
+const FIELD_CLASS =
+  'min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400';
 
 export default function Register({ onLogin }) {
   const navigate = useNavigate();
@@ -12,7 +16,7 @@ export default function Register({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const handleRegister = (e) => {
+  function handleRegister(e) {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -29,15 +33,15 @@ export default function Register({ onLogin }) {
     setError('');
     onLogin?.(result.account);
     navigate('/home', { replace: true });
-  };
+  }
 
-  const handleAutoFill = () => {
+  function handleAutoFill() {
     setName('Lucas Oliveira');
     setUsername('aluno.lucas');
     setPassword('senai0000');
     setConfirmPassword('senai0000');
     setError('');
-  };
+  }
 
   return (
     <main className="relative isolate flex min-h-dvh items-center justify-center overflow-x-clip bg-[#0b1116] p-3 text-slate-100 sm:p-6">
@@ -64,18 +68,18 @@ export default function Register({ onLogin }) {
               <p className="text-xs text-slate-400">SESI Aventura Educativa</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleAutoFill}
-            className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
-          >
+
+          <button type="button" onClick={handleAutoFill} className={BTN_EMERALD}>
             Preencher automaticamente
           </button>
         </header>
 
         <form onSubmit={handleRegister} className="space-y-3.5">
           {error && (
-            <p role="alert" className="flex items-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 px-3 py-2.5 text-xs font-medium text-rose-200">
+            <p
+              role="alert"
+              className="flex items-center gap-2 rounded-xl border border-rose-500/60 bg-rose-950/80 px-3 py-2.5 text-xs font-medium text-rose-200"
+            >
               <Icon name="alert" />
               <span>{error}</span>
             </p>
@@ -98,7 +102,7 @@ export default function Register({ onLogin }) {
               }}
               placeholder="Digite seu nome completo"
               required
-              className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -122,7 +126,7 @@ export default function Register({ onLogin }) {
               }}
               placeholder="Ex.: aluno.maria ou maria@sesi.br"
               required
-              className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+              className={FIELD_CLASS}
             />
           </div>
 
@@ -146,7 +150,7 @@ export default function Register({ onLogin }) {
                   }}
                   required
                   minLength={8}
-                  className="min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] py-2.5 pl-3.5 pr-16 text-base text-slate-100 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-400"
+                  className={`${FIELD_CLASS} pr-16`}
                 />
                 <button
                   type="button"

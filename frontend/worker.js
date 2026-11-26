@@ -32,6 +32,14 @@ function json(data, status = 200) {
   });
 }
 
+async function readJson(request) {
+  try {
+    return { data: await request.json(), error: null };
+  } catch {
+    return { data: null, error: json({ message: 'JSON inválido.' }, 400) };
+  }
+}
+
 function validDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
@@ -46,6 +54,7 @@ function validateTripPayload(body) {
   if (!body || typeof body !== 'object') {
     return { error: 'Dados da viagem inválidos.' };
   }
+
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   if (!title) return { error: 'Informe o nome da viagem.' };
   if (title.length > 100) return { error: 'O nome deve ter até 100 caracteres.' };
@@ -73,6 +82,7 @@ function validateTripPayload(body) {
 
 function rowToApiTrip(row) {
   const started = Boolean(row.started_at !== null || row.status !== 'planned');
+
   return {
     id: row.id,
     title: row.title,
@@ -168,6 +178,7 @@ export class TripStore extends DurableObject {
   updateTrip(id, data) {
     const current = this.getRow(id);
     if (!current) return null;
+
     this.sql.exec(
       `UPDATE trips SET
         title = ?, destination = ?, date = ?, departure = ?, arrival = ?,
@@ -190,8 +201,10 @@ export class TripStore extends DurableObject {
   startTrip(id) {
     const current = this.getRow(id);
     if (!current) return null;
+
     const now = new Date().toISOString();
     const startedAt = current.started_at || now;
+
     this.sql.exec(
       `UPDATE trips SET
         status = 'transit',
@@ -216,6 +229,7 @@ export class TripStore extends DurableObject {
   getTripLocation(id) {
     const current = this.getRow(id);
     if (!current) return { notFound: true };
+
     if (current.started_at === null && current.status === 'planned') {
       return {
         locked: true,
@@ -225,6 +239,7 @@ export class TripStore extends DurableObject {
         },
       };
     }
+
     return {
       payload: {
         started: true,
@@ -249,12 +264,15 @@ export class TripStore extends DurableObject {
   updateTripLocation(id, payload) {
     const current = this.getRow(id);
     if (!current) return { notFound: true };
+
     const status = typeof payload?.status === 'string' && STATUSES.has(payload.status) ? payload.status : null;
     const label = typeof payload?.label === 'string' ? payload.label.trim().slice(0, 200) : '';
     const progressNum = Number(payload?.progress);
+
     if (!status || !label || !Number.isFinite(progressNum)) {
       return { error: 'Informe o status, ponto de referência e progresso válidos.' };
     }
+
     const progress = Math.min(100, Math.max(0, Math.round(progressNum)));
     const now = new Date().toISOString();
     const startedAt = current.started_at || (status !== 'planned' ? now : null);
@@ -292,110 +310,101 @@ export class TripStore extends DurableObject {
   deleteTrip(id) {
     const current = this.getRow(id);
     if (!current) return false;
+
     this.sql.exec('DELETE FROM trips WHERE id = ?', id);
     return true;
   }
 }
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const { pathname } = url;
+async function handleApiRequest(request, env, pathname) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
 
-    if (pathname.startsWith('/api/')) {
-      if (request.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: CORS_HEADERS });
-      }
+  if (pathname === '/api/location/sesi-cerquilho' && request.method === 'GET') {
+    return json({
+      location: SESI_CERQUILHO,
+      timestamp: new Date().toISOString(),
+    });
+  }
 
-      if (pathname === '/api/location/sesi-cerquilho' && request.method === 'GET') {
-        return json({
-          location: SESI_CERQUILHO,
-          timestamp: new Date().toISOString(),
-        });
-      }
+  const store = env.TRIP_STORE.get(env.TRIP_STORE.idFromName('global-trips'));
 
-      const store = env.TRIP_STORE.get(env.TRIP_STORE.idFromName('global-trips'));
+  if (pathname === '/api/trips' && request.method === 'GET') {
+    return json({ trips: await store.listTrips() });
+  }
 
-      if (pathname === '/api/trips' && request.method === 'GET') {
-        const trips = await store.listTrips();
-        return json({ trips });
-      }
+  if (pathname === '/api/trips' && request.method === 'POST') {
+    const { data, error } = await readJson(request);
+    if (error) return error;
 
-      if (pathname === '/api/trips' && request.method === 'POST') {
-        let body = null;
-        try {
-          body = await request.json();
-        } catch {
-          return json({ message: 'JSON inválido.' }, 400);
-        }
-        const validated = validateTripPayload(body);
-        if (validated.error) {
-          return json({ message: validated.error }, 422);
-        }
-        const trip = await store.createTrip(validated.data);
-        return json({ trip }, 201);
-      }
+    const validated = validateTripPayload(data);
+    if (validated.error) return json({ message: validated.error }, 422);
 
-      const tripMatch = pathname.match(/^\/api\/trips\/([^/]+)$/);
-      if (tripMatch) {
-        const tripId = decodeURIComponent(tripMatch[1]);
-        if (request.method === 'PATCH') {
-          let body = null;
-          try {
-            body = await request.json();
-          } catch {
-            return json({ message: 'JSON inválido.' }, 400);
-          }
-          const validated = validateTripPayload(body);
-          if (validated.error) {
-            return json({ message: validated.error }, 422);
-          }
-          const trip = await store.updateTrip(tripId, validated.data);
-          if (!trip) return json({ message: 'Viagem não encontrada.' }, 404);
-          return json({ trip });
-        }
+    return json({ trip: await store.createTrip(validated.data) }, 201);
+  }
 
-        if (request.method === 'DELETE') {
-          const deleted = await store.deleteTrip(tripId);
-          if (!deleted) return json({ message: 'Viagem não encontrada.' }, 404);
-          return json({ deleted: true });
-        }
-      }
+  const tripMatch = pathname.match(/^\/api\/trips\/([^/]+)$/);
+  if (tripMatch) {
+    const tripId = decodeURIComponent(tripMatch[1]);
 
-      const startMatch = pathname.match(/^\/api\/trips\/([^/]+)\/start$/);
-      if (startMatch && request.method === 'POST') {
-        const tripId = decodeURIComponent(startMatch[1]);
-        const trip = await store.startTrip(tripId);
-        if (!trip) return json({ message: 'Viagem não encontrada.' }, 404);
-        return json({ trip, origin: SESI_CERQUILHO });
-      }
+    if (request.method === 'PATCH') {
+      const { data, error } = await readJson(request);
+      if (error) return error;
 
-      const locMatch = pathname.match(/^\/api\/trips\/([^/]+)\/location$/);
-      if (locMatch) {
-        const tripId = decodeURIComponent(locMatch[1]);
-        if (request.method === 'GET') {
-          const res = await store.getTripLocation(tripId);
-          if (res.notFound) return json({ message: 'Viagem não encontrada.' }, 404);
-          if (res.locked) return json(res.payload, 423);
-          return json(res.payload);
-        }
-        if (request.method === 'PATCH') {
-          let body = null;
-          try {
-            body = await request.json();
-          } catch {
-            return json({ message: 'JSON inválido.' }, 400);
-          }
-          const res = await store.updateTripLocation(tripId, body);
-          if (res.notFound) return json({ message: 'Viagem não encontrada.' }, 404);
-          if (res.error) return json({ message: res.error }, 422);
-          return json({ trip: res.trip });
-        }
-      }
+      const validated = validateTripPayload(data);
+      if (validated.error) return json({ message: validated.error }, 422);
 
-      return json({ message: 'Rota não encontrada.' }, 404);
+      const trip = await store.updateTrip(tripId, validated.data);
+      return trip ? json({ trip }) : json({ message: 'Viagem não encontrada.' }, 404);
     }
 
+    if (request.method === 'DELETE') {
+      const deleted = await store.deleteTrip(tripId);
+      return deleted ? json({ deleted: true }) : json({ message: 'Viagem não encontrada.' }, 404);
+    }
+  }
+
+  const startMatch = pathname.match(/^\/api\/trips\/([^/]+)\/start$/);
+  if (startMatch && request.method === 'POST') {
+    const tripId = decodeURIComponent(startMatch[1]);
+    const trip = await store.startTrip(tripId);
+    return trip
+      ? json({ trip, origin: SESI_CERQUILHO })
+      : json({ message: 'Viagem não encontrada.' }, 404);
+  }
+
+  const locMatch = pathname.match(/^\/api\/trips\/([^/]+)\/location$/);
+  if (locMatch) {
+    const tripId = decodeURIComponent(locMatch[1]);
+
+    if (request.method === 'GET') {
+      const res = await store.getTripLocation(tripId);
+      if (res.notFound) return json({ message: 'Viagem não encontrada.' }, 404);
+      if (res.locked) return json(res.payload, 423);
+      return json(res.payload);
+    }
+
+    if (request.method === 'PATCH') {
+      const { data, error } = await readJson(request);
+      if (error) return error;
+
+      const res = await store.updateTripLocation(tripId, data);
+      if (res.notFound) return json({ message: 'Viagem não encontrada.' }, 404);
+      if (res.error) return json({ message: res.error }, 422);
+      return json({ trip: res.trip });
+    }
+  }
+
+  return json({ message: 'Rota não encontrada.' }, 404);
+}
+
+export default {
+  async fetch(request, env) {
+    const { pathname } = new URL(request.url);
+    if (pathname.startsWith('/api/')) {
+      return handleApiRequest(request, env, pathname);
+    }
     return env.ASSETS.fetch(request);
   },
 };

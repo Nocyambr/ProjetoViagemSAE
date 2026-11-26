@@ -4,9 +4,6 @@ import { loadPhotos } from './photos.js';
 import { loadTeachers } from './teachers.js';
 import { fetchTripsApi } from './api.js';
 
-/**
- * Subscribes to localStorage updates and synchronizes trips from the Laravel API.
- */
 export function usePortalData() {
   const [state, setState] = useState(() => ({
     tripsState: loadTrips(),
@@ -29,13 +26,12 @@ export function usePortalData() {
 
     refreshFromApi();
 
-    const onFocus = () => {
-      refreshFromApi();
-    };
+    const onFocus = () => refreshFromApi();
 
     window.addEventListener('storage', syncLocal);
     window.addEventListener('sae:data-updated', syncLocal);
     window.addEventListener('focus', onFocus);
+
     return () => {
       window.removeEventListener('storage', syncLocal);
       window.removeEventListener('sae:data-updated', syncLocal);

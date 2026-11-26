@@ -18,9 +18,6 @@ class TripController extends Controller
     {
     }
 
-    /**
-     * Returns the integrated SESI Cerquilho-SP geolocation data.
-     */
     public function sesiCerquilho(): JsonResponse
     {
         return response()->json([
@@ -29,9 +26,6 @@ class TripController extends Controller
         ]);
     }
 
-    /**
-     * Lists all trips ordered chronologically.
-     */
     public function index(): JsonResponse
     {
         $trips = Trip::query()
@@ -44,9 +38,6 @@ class TripController extends Controller
         return response()->json(['trips' => $trips]);
     }
 
-    /**
-     * Creates a new trip anchored at SESI Cerquilho-SP.
-     */
     public function store(Request $request): JsonResponse
     {
         $data = $this->validateTripPayload($request);
@@ -77,9 +68,6 @@ class TripController extends Controller
         return response()->json(['trip' => $trip->toApiArray()], 201);
     }
 
-    /**
-     * Updates an existing trip's schedule or metadata.
-     */
     public function update(Request $request, string $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
@@ -100,9 +88,6 @@ class TripController extends Controller
         return response()->json(['trip' => $trip->fresh()->toApiArray()]);
     }
 
-    /**
-     * Starts a trip by the teacher and publishes SESI Cerquilho-SP as the live starting location.
-     */
     public function start(string $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
@@ -125,12 +110,11 @@ class TripController extends Controller
         ]);
     }
 
-    /**
-     * Returns the live location payload for a started trip (SESI Cerquilho-SP origin + current bus point).
-     */
     public function location(string $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
+
+        // Impede consulta antes do professor iniciar a viagem
         if ($trip->started_at === null && $trip->status === 'planned') {
             return response()->json([
                 'started' => false,
@@ -159,9 +143,6 @@ class TripController extends Controller
         ]);
     }
 
-    /**
-     * Updates the live bus location and status along the route.
-     */
     public function updateLocation(Request $request, string $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);
@@ -197,9 +178,6 @@ class TripController extends Controller
         return response()->json(['trip' => $trip->fresh()->toApiArray()]);
     }
 
-    /**
-     * Deletes a trip record.
-     */
     public function destroy(string $id): JsonResponse
     {
         $trip = Trip::findOrFail($id);

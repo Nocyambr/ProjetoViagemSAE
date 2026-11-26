@@ -23,8 +23,293 @@ import {
   TEACHER_DIRECTORY,
 } from '../lib/teachers.js';
 import { removePhotosByTrip } from '../lib/photos.js';
+import {
+  BTN_EMERALD,
+  BTN_PRIMARY,
+  CARD_CLASS,
+  INPUT_CLASS,
+  LABEL_CLASS,
+  SELECT_CLASS,
+} from '../lib/styles.js';
 import TripRequiredGate from '../components/TripRequiredGate.jsx';
 import Icon from '../components/Icon.jsx';
+
+function TripForm({
+  draft,
+  setDraft,
+  editingId,
+  error,
+  selectedTeachers,
+  onSubmit,
+  onAutoFill,
+  onCancelEdit,
+  onToggleTeacher,
+  onSelectAllTeachers,
+}) {
+  return (
+    <section className={`${CARD_CLASS} mb-6`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-bold text-rose-400">
+          {editingId ? 'Editar viagem' : 'Criar nova viagem'}
+        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={onAutoFill} className={BTN_EMERALD}>
+            Preencher automaticamente
+          </button>
+          {editingId && (
+            <button type="button" onClick={onCancelEdit} className="text-xs font-semibold text-slate-300 underline hover:text-white">
+              Cancelar edição
+            </button>
+          )}
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+        <label className={LABEL_CLASS}>
+          Turma ou nome da viagem
+          <input
+            className={INPUT_CLASS}
+            required
+            maxLength={100}
+            value={draft.title}
+            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            placeholder="Ex.: Excursão 3ºA"
+          />
+        </label>
+
+        <label className={LABEL_CLASS}>
+          Destino
+          <input
+            className={INPUT_CLASS}
+            maxLength={100}
+            value={draft.destination}
+            onChange={(e) => setDraft({ ...draft, destination: e.target.value })}
+            placeholder="Ex.: Parque Ecológico / Museu"
+          />
+        </label>
+
+        <label className={LABEL_CLASS}>
+          Data
+          <input
+            type="date"
+            required
+            className={INPUT_CLASS}
+            value={draft.date}
+            onChange={(e) => setDraft({ ...draft, date: e.target.value })}
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className={LABEL_CLASS}>
+            Saída
+            <input
+              type="time"
+              required
+              className={INPUT_CLASS}
+              value={draft.departure}
+              onChange={(e) => setDraft({ ...draft, departure: e.target.value })}
+            />
+          </label>
+          <label className={LABEL_CLASS}>
+            Chegada
+            <input
+              type="time"
+              required
+              className={INPUT_CLASS}
+              value={draft.arrival}
+              onChange={(e) => setDraft({ ...draft, arrival: e.target.value })}
+            />
+          </label>
+        </div>
+
+        <label className={`${LABEL_CLASS} sm:col-span-2`}>
+          Ônibus / Transporte
+          <input
+            className={INPUT_CLASS}
+            maxLength={80}
+            value={draft.busName}
+            onChange={(e) => setDraft({ ...draft, busName: e.target.value })}
+            placeholder="Ex.: Ônibus 01 · Placa ABC-1D23"
+          />
+        </label>
+
+        <div className="sm:col-span-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className={LABEL_CLASS}>
+              Professores responsáveis{' '}
+              <span className="text-xs font-normal text-slate-400">
+                ({selectedTeachers.length} de {TEACHER_DIRECTORY.length} selecionados)
+              </span>
+            </p>
+            {selectedTeachers.length < TEACHER_DIRECTORY.length && (
+              <button
+                type="button"
+                onClick={onSelectAllTeachers}
+                className="text-xs font-bold text-emerald-300 underline hover:text-emerald-200"
+              >
+                Selecionar os dois
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+            {TEACHER_DIRECTORY.map((profile) => {
+              const selected = selectedTeachers.includes(profile.name);
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onToggleTeacher(profile)}
+                  className={`flex flex-col items-center rounded-2xl border p-3 text-center transition-colors ${
+                    selected
+                      ? 'border-emerald-400 bg-emerald-950/60 text-white'
+                      : 'border-slate-700 bg-[#0b1116] text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  <img
+                    src={profile.photo}
+                    alt={profile.name}
+                    className="h-20 w-20 rounded-full border border-slate-600 object-cover object-top"
+                  />
+                  <span className="mt-2 text-sm font-bold leading-tight">{profile.name}</span>
+                  <span
+                    className={`mt-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                      selected ? 'bg-emerald-700/70 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {selected ? 'Selecionado' : 'Selecionar'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {error && <p role="alert" className="text-rose-300 sm:col-span-2">{error}</p>}
+
+        <button type="submit" className={`${BTN_PRIMARY} sm:col-span-2`}>
+          {editingId ? 'Salvar alterações' : 'Criar viagem'}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function TripItem({ trip, teacher, inspected, onInspect, onStart, onEdit, onDelete }) {
+  const tripTeachers = resolveTripTeachers(trip);
+
+  return (
+    <li className="border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 break-words">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onInspect(trip)}
+              className="text-left font-bold text-rose-400 underline-offset-4 hover:underline"
+            >
+              {trip.title}
+            </button>
+            <span
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                trip.started
+                  ? 'border-emerald-700/60 bg-emerald-950/70 text-emerald-300'
+                  : 'border-slate-600 bg-slate-800 text-slate-300'
+              }`}
+            >
+              {trip.started ? `Iniciada · ${statusLabel(trip.status)}` : 'Aguardando início'}
+            </span>
+          </div>
+
+          {trip.destination && <p className="mt-1 text-sm text-slate-200">Destino: {trip.destination}</p>}
+          <p className="mt-1 text-sm text-slate-300">
+            {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
+          </p>
+
+          <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
+            <div className="flex -space-x-1.5">
+              {tripTeachers.map((prof) => (
+                <img
+                  key={prof.id}
+                  src={prof.photo}
+                  alt={prof.name}
+                  className="h-6 w-6 rounded-full border border-slate-600 object-cover object-top"
+                />
+              ))}
+            </div>
+            <span>
+              {formatTeacherNames(tripTeachers.map((prof) => prof.name))} · {trip.busName}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onInspect(trip)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+          >
+            {!trip.started && <Icon name="lock" className="h-3.5 w-3.5" />}
+            <span>Localização</span>
+          </button>
+
+          {teacher && !trip.started && (
+            <button
+              type="button"
+              onClick={() => onStart(trip)}
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
+            >
+              Iniciar viagem
+            </button>
+          )}
+
+          {teacher && (
+            <>
+              <button
+                type="button"
+                onClick={() => onEdit(trip)}
+                className="text-sm text-emerald-300 underline hover:text-emerald-200"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                aria-label={`Excluir ${trip.title}`}
+                onClick={() => onDelete(trip)}
+                className="text-sm text-rose-400 underline hover:text-rose-300"
+              >
+                Excluir
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {inspected && (
+        <div className="mt-3 rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4 text-sm">
+          {inspected.error ? (
+            <p className="text-amber-300">{inspected.error}</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-emerald-300">Localização atual</p>
+              <p className="font-bold text-slate-100">{inspected.origin?.name || 'SESI Cerquilho - SP'}</p>
+              <p className="text-xs text-slate-300">
+                {inspected.currentLocation.address || inspected.origin?.address}
+              </p>
+              {inspected.currentLocation.label && inspected.currentLocation.label !== inspected.origin?.label && (
+                <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
+              )}
+              <p className="text-xs text-slate-400">
+                GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
 
 export default function Schedule({ user, portal }) {
   const teacher = isTeacher(user);
@@ -40,6 +325,7 @@ export default function Schedule({ user, portal }) {
   const [inspectedLocations, setInspectedLocations] = useState({});
 
   const sortedTrips = useMemo(() => filterTrips(trips, query, period), [trips, query, period]);
+  const selectedTeachers = parseTeacherNames(draft.teacherNames ?? draft.teacherName);
 
   if (!teacher && trips.length === 0) {
     return <TripRequiredGate isTeacher={false} title="Cronograma" />;
@@ -59,51 +345,45 @@ export default function Schedule({ user, portal }) {
     if (editingId) {
       const result = await updateTripApi(trips, editingId, draft);
       setError(result.error);
-      if (!result.error) {
-        setNotice('Viagem atualizada com sucesso.');
-        setEditingId(null);
-        setDraft(EMPTY_DRAFT);
-      } else {
+      if (result.error) {
         setNotice('');
+        return;
       }
+      setNotice('Viagem atualizada com sucesso.');
+      setEditingId(null);
+      setDraft(EMPTY_DRAFT);
       return;
     }
 
     const result = await createTripApi(trips, draft);
     setError(result.error);
-    if (!result.error) {
-      setNotice('Viagem criada! Clique em "Iniciar viagem" quando sair do SESI Cerquilho - SP.');
-      setDraft(EMPTY_DRAFT);
-    } else {
+    if (result.error) {
       setNotice('');
+      return;
     }
+    setNotice('Viagem criada! Clique em "Iniciar viagem" quando sair do SESI Cerquilho - SP.');
+    setDraft(EMPTY_DRAFT);
   }
 
   async function handleStart(trip) {
     if (!teacher) return;
+
     const result = await startTripApi(trips, trip.id);
     setError(result.error);
-    if (!result.error) {
-      setNotice(`Viagem "${trip.title}" iniciada com localização atual em SESI Cerquilho - SP.`);
-      const locRes = await fetchTripLocationApi({ ...trip, started: true, status: 'transit' });
-      if (locRes.started) {
-        setInspectedLocations((prev) => ({ ...prev, [trip.id]: locRes.location }));
-      }
+    if (result.error) return;
+
+    setNotice(`Viagem "${trip.title}" iniciada com localização atual em SESI Cerquilho - SP.`);
+    const locRes = await fetchTripLocationApi({ ...trip, started: true, status: 'transit' });
+    if (locRes.started) {
+      setInspectedLocations((prev) => ({ ...prev, [trip.id]: locRes.location }));
     }
   }
 
   async function handleInspectLocation(trip) {
     const res = await fetchTripLocationApi(trip);
-    if (!res.started) {
-      setInspectedLocations((prev) => ({
-        ...prev,
-        [trip.id]: { error: res.error },
-      }));
-      return;
-    }
     setInspectedLocations((prev) => ({
       ...prev,
-      [trip.id]: res.location,
+      [trip.id]: res.started ? res.location : { error: res.error },
     }));
   }
 
@@ -133,61 +413,55 @@ export default function Schedule({ user, portal }) {
   }
 
   function handleAutoFill() {
-    const nextDraft = buildAutoFillTripDraft(presetIndex);
-    setDraft(nextDraft);
+    setDraft(buildAutoFillTripDraft(presetIndex));
     setPresetIndex((prev) => prev + 1);
     setError('');
     setNotice('Informações preenchidas automaticamente com os dois professores selecionados.');
   }
 
-  const selectedTeachers = parseTeacherNames(draft.teacherNames ?? draft.teacherName);
-
-  function toggleDraftTeacher(profile) {
-    const exists = selectedTeachers.includes(profile.name);
-    let nextNames;
-    if (exists) {
-      if (selectedTeachers.length <= 1) {
-        setNotice('Pelo menos um professor responsável deve permanecer selecionado.');
-        return;
-      }
-      nextNames = selectedTeachers.filter((name) => name !== profile.name);
-    } else {
-      nextNames = TEACHER_DIRECTORY.map((t) => t.name).filter(
-        (name) => selectedTeachers.includes(name) || name === profile.name,
-      );
-    }
-    const primary = TEACHER_DIRECTORY.find((t) => t.name === nextNames[0]) ?? TEACHER_DIRECTORY[0];
+  function updateDraftTeachers(names) {
+    const primary = TEACHER_DIRECTORY.find((t) => t.name === names[0]) ?? TEACHER_DIRECTORY[0];
     setDraft({
       ...draft,
-      teacherNames: nextNames,
-      teacherName: formatTeacherNames(nextNames),
+      teacherNames: names,
+      teacherName: formatTeacherNames(names),
       teacherContact: primary.contact,
       teacherPhoto: primary.photo,
     });
   }
 
+  function toggleDraftTeacher(profile) {
+    const exists = selectedTeachers.includes(profile.name);
+    if (exists) {
+      if (selectedTeachers.length <= 1) {
+        setNotice('Pelo menos um professor responsável deve permanecer selecionado.');
+        return;
+      }
+      updateDraftTeachers(selectedTeachers.filter((name) => name !== profile.name));
+      return;
+    }
+
+    const nextNames = TEACHER_DIRECTORY.map((t) => t.name).filter(
+      (name) => selectedTeachers.includes(name) || name === profile.name,
+    );
+    updateDraftTeachers(nextNames);
+  }
+
   function selectAllTeachers() {
-    const allNames = TEACHER_DIRECTORY.map((t) => t.name);
-    setDraft({
-      ...draft,
-      teacherNames: allNames,
-      teacherName: formatTeacherNames(allNames),
-      teacherContact: TEACHER_DIRECTORY[0].contact,
-      teacherPhoto: TEACHER_DIRECTORY[0].photo,
-    });
+    updateDraftTeachers(TEACHER_DIRECTORY.map((t) => t.name));
   }
 
   async function handleDelete(trip) {
     if (!teacher) return;
-    if (window.confirm(`Excluir a viagem "${trip.title}"?`)) {
-      const res = await deleteTripApi(trips, trip.id);
-      if (!res.error) {
-        removePhotosByTrip(photos, trip.id);
-        if (editingId === trip.id) cancelEdit();
-        setNotice('Viagem removida.');
-      }
-      setError(res.error);
+    if (!window.confirm(`Excluir a viagem "${trip.title}"?`)) return;
+
+    const res = await deleteTripApi(trips, trip.id);
+    if (!res.error) {
+      removePhotosByTrip(photos, trip.id);
+      if (editingId === trip.id) cancelEdit();
+      setNotice('Viagem removida.');
     }
+    setError(res.error);
   }
 
   function exportTrips() {
@@ -201,13 +475,10 @@ export default function Schedule({ user, portal }) {
     setNotice('Cópia do cronograma baixada.');
   }
 
-  const inputClass =
-    'mt-1 block w-full rounded-lg border border-slate-500 bg-[#0b1116] p-2.5 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none';
-
   return (
     <div className="min-h-full bg-[#0b1116] text-slate-100">
-      <div className="max-w-4xl mx-auto p-4 sm:p-8">
-        <h1 className="text-3xl font-bold text-rose-400 mb-6">
+      <div className="mx-auto max-w-4xl p-4 sm:p-8">
+        <h1 className="mb-6 text-3xl font-bold text-rose-400">
           {teacher ? 'Configurar viagens' : 'Cronograma de viagens'}
         </h1>
 
@@ -218,160 +489,23 @@ export default function Schedule({ user, portal }) {
         )}
 
         {teacher && (
-          <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-5 sm:p-8 shadow-sm mb-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-rose-400 font-bold">
-                {editingId ? 'Editar viagem' : 'Criar nova viagem'}
-              </h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleAutoFill}
-                  className="rounded-xl border border-emerald-500/60 bg-emerald-950/60 px-3.5 py-2 text-xs font-bold text-emerald-300 transition-colors hover:bg-emerald-900/60"
-                >
-                  Preencher automaticamente
-                </button>
-                {editingId && (
-                  <button type="button" onClick={cancelEdit} className="text-xs font-semibold text-slate-300 underline hover:text-white">
-                    Cancelar edição
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-slate-200">
-                Turma ou nome da viagem
-                <input
-                  className={inputClass}
-                  required
-                  maxLength={100}
-                  value={draft.title}
-                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                  placeholder="Ex.: Excursão 3ºA"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200">
-                Destino
-                <input
-                  className={inputClass}
-                  maxLength={100}
-                  value={draft.destination}
-                  onChange={(e) => setDraft({ ...draft, destination: e.target.value })}
-                  placeholder="Ex.: Parque Ecológico / Museu"
-                />
-              </label>
-
-              <label className="text-sm font-medium text-slate-200">
-                Data
-                <input
-                  type="date"
-                  required
-                  className={inputClass}
-                  value={draft.date}
-                  onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-                />
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-sm font-medium text-slate-200">
-                  Saída
-                  <input
-                    type="time"
-                    required
-                    className={inputClass}
-                    value={draft.departure}
-                    onChange={(e) => setDraft({ ...draft, departure: e.target.value })}
-                  />
-                </label>
-                <label className="text-sm font-medium text-slate-200">
-                  Chegada
-                  <input
-                    type="time"
-                    required
-                    className={inputClass}
-                    value={draft.arrival}
-                    onChange={(e) => setDraft({ ...draft, arrival: e.target.value })}
-                  />
-                </label>
-              </div>
-
-              <label className="text-sm font-medium text-slate-200 sm:col-span-2">
-                Ônibus / Transporte
-                <input
-                  className={inputClass}
-                  maxLength={80}
-                  value={draft.busName}
-                  onChange={(e) => setDraft({ ...draft, busName: e.target.value })}
-                  placeholder="Ex.: Ônibus 01 · Placa ABC-1D23"
-                />
-              </label>
-
-              <div className="sm:col-span-2">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-slate-200">
-                    Professores responsáveis{' '}
-                    <span className="text-xs font-normal text-slate-400">
-                      ({selectedTeachers.length} de {TEACHER_DIRECTORY.length} selecionados)
-                    </span>
-                  </p>
-                  {selectedTeachers.length < TEACHER_DIRECTORY.length && (
-                    <button
-                      type="button"
-                      onClick={selectAllTeachers}
-                      className="text-xs font-bold text-emerald-300 underline hover:text-emerald-200"
-                    >
-                      Selecionar os dois
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-                  {TEACHER_DIRECTORY.map((profile) => {
-                    const selected = selectedTeachers.includes(profile.name);
-                    return (
-                      <button
-                        key={profile.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleDraftTeacher(profile)}
-                        className={`flex flex-col items-center rounded-2xl border p-3 text-center transition-colors ${
-                          selected
-                            ? 'border-emerald-400 bg-emerald-950/60 text-white'
-                            : 'border-slate-700 bg-[#0b1116] text-slate-300 hover:border-slate-500'
-                        }`}
-                      >
-                        <img
-                          src={profile.photo}
-                          alt={profile.name}
-                          className="h-20 w-20 rounded-full border border-slate-600 object-cover object-top"
-                        />
-                        <span className="mt-2 text-sm font-bold leading-tight">{profile.name}</span>
-                        <span
-                          className={`mt-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                            selected ? 'bg-emerald-700/70 text-emerald-100' : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {selected ? 'Selecionado' : 'Selecionar'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {error && <p role="alert" className="text-rose-300 sm:col-span-2">{error}</p>}
-
-              <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 px-6 rounded-lg sm:col-span-2">
-                {editingId ? 'Salvar alterações' : 'Criar viagem'}
-              </button>
-            </form>
-          </section>
+          <TripForm
+            draft={draft}
+            setDraft={setDraft}
+            editingId={editingId}
+            error={error}
+            selectedTeachers={selectedTeachers}
+            onSubmit={handleSubmit}
+            onAutoFill={handleAutoFill}
+            onCancelEdit={cancelEdit}
+            onToggleTeacher={toggleDraftTeacher}
+            onSelectAllTeachers={selectAllTeachers}
+          />
         )}
 
-        <section className="rounded-3xl border border-slate-800 bg-[#131d24] p-5 sm:p-8 shadow-sm">
+        <section className={CARD_CLASS}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-rose-400 font-bold">Viagens cadastradas</h2>
+            <h2 className="font-bold text-rose-400">Viagens cadastradas</h2>
             <button
               type="button"
               onClick={exportTrips}
@@ -383,22 +517,22 @@ export default function Schedule({ user, portal }) {
           </div>
 
           <div className="mb-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium text-slate-200">
+            <label className={LABEL_CLASS}>
               Buscar viagem
               <input
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Turma, nome ou destino"
-                className="mt-1 block w-full rounded-xl border border-slate-500 bg-[#0b1116] p-3 text-slate-100 placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none"
+                className={INPUT_CLASS}
               />
             </label>
-            <label className="text-sm font-medium text-slate-200">
+            <label className={LABEL_CLASS}>
               Período
               <select
                 value={period}
                 onChange={(event) => setPeriod(event.target.value)}
-                className="mt-1 block min-h-12 w-full rounded-xl border border-slate-500 bg-[#0b1116] px-3.5 py-2.5 text-slate-100 focus:border-emerald-400 focus:outline-none"
+                className={SELECT_CLASS}
               >
                 <option value="all">Todas as viagens</option>
                 <option value="upcoming">A partir de hoje</option>
@@ -407,7 +541,9 @@ export default function Schedule({ user, portal }) {
             </label>
           </div>
 
-          <p role="status" className="mb-5 text-sm text-slate-400">{sortedTrips.length} de {trips.length} viagens</p>
+          <p role="status" className="mb-5 text-sm text-slate-400">
+            {sortedTrips.length} de {trips.length} viagens
+          </p>
 
           {sortedTrips.length === 0 && (
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-5 text-slate-200">
@@ -415,7 +551,10 @@ export default function Schedule({ user, portal }) {
               {trips.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setQuery(''); setPeriod('all'); }}
+                  onClick={() => {
+                    setQuery('');
+                    setPeriod('all');
+                  }}
                   className="mt-3 font-semibold text-rose-400 underline hover:text-rose-300"
                 >
                   Limpar filtros
@@ -425,110 +564,18 @@ export default function Schedule({ user, portal }) {
           )}
 
           <ul className="space-y-4">
-            {sortedTrips.map((trip) => {
-              const inspected = inspectedLocations[trip.id];
-              const tripTeachers = resolveTripTeachers(trip);
-              return (
-                <li key={trip.id} className="border-b border-slate-800 pb-4">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="min-w-0 break-words">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleInspectLocation(trip)}
-                          className="text-left font-bold text-rose-400 underline-offset-4 hover:underline"
-                        >
-                          {trip.title}
-                        </button>
-                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                          trip.started
-                            ? 'border-emerald-700/60 bg-emerald-950/70 text-emerald-300'
-                            : 'border-slate-600 bg-slate-800 text-slate-300'
-                        }`}>
-                          {trip.started ? `Iniciada · ${statusLabel(trip.status)}` : 'Aguardando início'}
-                        </span>
-                      </div>
-                      {trip.destination && <p className="mt-1 text-sm text-slate-200">Destino: {trip.destination}</p>}
-                      <p className="mt-1 text-sm text-slate-300">
-                        {trip.date.split('-').reverse().join('/')} · Saída: {trip.departure} · Chegada: {trip.arrival}
-                      </p>
-                      <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-400">
-                        <div className="flex -space-x-1.5">
-                          {tripTeachers.map((prof) => (
-                            <img
-                              key={prof.id}
-                              src={prof.photo}
-                              alt={prof.name}
-                              className="h-6 w-6 rounded-full border border-slate-600 object-cover object-top"
-                            />
-                          ))}
-                        </div>
-                        <span>{formatTeacherNames(tripTeachers.map((prof) => prof.name))} · {trip.busName}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleInspectLocation(trip)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700"
-                      >
-                        {!trip.started && <Icon name="lock" className="h-3.5 w-3.5" />}
-                        <span>Localização</span>
-                      </button>
-
-                      {teacher && !trip.started && (
-                        <button
-                          type="button"
-                          onClick={() => handleStart(trip)}
-                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
-                        >
-                          Iniciar viagem
-                        </button>
-                      )}
-
-                      {teacher && (
-                        <>
-                          <button type="button" onClick={() => startEdit(trip)} className="text-sm text-emerald-300 underline hover:text-emerald-200">
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Excluir ${trip.title}`}
-                            onClick={() => handleDelete(trip)}
-                            className="text-sm text-rose-400 underline hover:text-rose-300"
-                          >
-                            Excluir
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {inspected && (
-                    <div className="mt-3 rounded-2xl border border-slate-700/80 bg-[#0b1116] p-4 text-sm">
-                      {inspected.error ? (
-                        <p className="text-amber-300">{inspected.error}</p>
-                      ) : (
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-emerald-300">
-                            Localização atual
-                          </p>
-                          <p className="font-bold text-slate-100">{inspected.origin?.name || 'SESI Cerquilho - SP'}</p>
-                          <p className="text-xs text-slate-300">{inspected.currentLocation.address || inspected.origin?.address}</p>
-                          {inspected.currentLocation.label && inspected.currentLocation.label !== inspected.origin?.label && (
-                            <p className="text-sm text-emerald-200">{inspected.currentLocation.label}</p>
-                          )}
-                          <p className="text-xs text-slate-400">
-                            GPS: {inspected.currentLocation.lat}, {inspected.currentLocation.lng}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
+            {sortedTrips.map((trip) => (
+              <TripItem
+                key={trip.id}
+                trip={trip}
+                teacher={teacher}
+                inspected={inspectedLocations[trip.id]}
+                onInspect={handleInspectLocation}
+                onStart={handleStart}
+                onEdit={startEdit}
+                onDelete={handleDelete}
+              />
+            ))}
           </ul>
         </section>
       </div>

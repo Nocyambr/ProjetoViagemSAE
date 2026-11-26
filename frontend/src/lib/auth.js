@@ -6,15 +6,14 @@ const BUILTIN_ACCOUNTS = [
   { username: 'usuario1', password: 'senai00', role: 'student', name: 'Aluno / Responsável' },
 ];
 
-/**
- * Loads custom registered student/parent accounts from storage.
- */
 export function loadRegisteredAccounts(storage) {
   try {
     const raw = (storage ?? globalThis.localStorage).getItem(ACCOUNTS_STORAGE_KEY);
     if (!raw) return [];
+
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
+
     return parsed.filter(
       (acc) =>
         acc &&
@@ -28,9 +27,6 @@ export function loadRegisteredAccounts(storage) {
   }
 }
 
-/**
- * Registers a new student/parent account when the username is valid and available.
- */
 export function registerAccount({ name, username, password }, storage) {
   const cleanName = typeof name === 'string' ? name.trim() : '';
   const cleanUser = typeof username === 'string' ? username.trim() : '';
@@ -49,6 +45,7 @@ export function registerAccount({ name, username, password }, storage) {
   const existing = loadRegisteredAccounts(storage);
   const allAccounts = [...BUILTIN_ACCOUNTS, ...existing];
   const lower = cleanUser.toLowerCase();
+
   if (allAccounts.some((acc) => acc.username.toLowerCase() === lower)) {
     return { account: null, error: 'Este usuário já está cadastrado.' };
   }
@@ -75,9 +72,6 @@ export function registerAccount({ name, username, password }, storage) {
   };
 }
 
-/**
- * Authenticates built-in teacher/student accounts or registered student/parent accounts.
- */
 export function authenticate(username, password, storage) {
   const normalized = typeof username === 'string' ? username.trim() : '';
   const pass = typeof password === 'string' ? password : '';
@@ -99,13 +93,11 @@ export function authenticate(username, password, storage) {
   };
 }
 
-/**
- * Loads the active session object from session storage.
- */
 export function loadSession(storage) {
   try {
     const raw = (storage ?? globalThis.sessionStorage).getItem(AUTH_STORAGE_KEY);
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
     if (
       parsed &&
@@ -121,9 +113,6 @@ export function loadSession(storage) {
   }
 }
 
-/**
- * Persists the active user session in session storage for the current tab.
- */
 export function saveSession(user, storage) {
   try {
     const store = storage ?? globalThis.sessionStorage;
@@ -138,16 +127,10 @@ export function saveSession(user, storage) {
   }
 }
 
-/**
- * Clears the current tab session.
- */
 export function clearSession(storage) {
   return saveSession(null, storage);
 }
 
-/**
- * Returns true when the active session belongs to a teacher.
- */
 export function isTeacher(user) {
   return user?.role === 'teacher';
 }
