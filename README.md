@@ -1,10 +1,82 @@
 # ProjetoViagemSAE — SESI Aventura Educativa
 
-Interface para organização de viagens educativas, com React 19, Vite 8 e Tailwind CSS. O diretório `backend/` contém a estrutura inicial do Laravel 12 incluída no projeto original.
+Aplicação web para organização e acompanhamento de viagens educativas do **SESI Cerquilho - SP (CE 428)**.
 
-## Executar a interface
+## Visão geral da arquitetura
 
-Requisitos: Node.js 22.12+ (recomendado: Node.js 24) e npm.
+- **Frontend (`frontend/`):** React 19, Vite 8, React Router 7 e Tailwind CSS 4.
+- **Edge API & Deploy (`frontend/worker.js` e `frontend/wrangler.jsonc`):** Cloudflare Workers (`projeto-viagem-sae`) com persistência em Durable Object SQLite (`TripStore`) e entrega dos arquivos estáticos da SPA (`frontend/dist/`).
+- **Backend alternativo (`backend/`):** Laravel 12 (PHP 8.2+) com banco SQLite, `TripController`, modelo `Trip` e serviço `SesiLocationService`.
+- **Resiliência offline:** quando a API está indisponível, o frontend faz fallback automático para `localStorage` (`sae:trips:v2`) e mantém a sincronização ao focar a janela e entre abas (`storage` / `sae:data-updated`).
+
+## Contas de demonstração e perfis
+
+A tela de login (`/login`) conta com botões **Preencher automaticamente** para alternar rapidamente entre os perfis:
+
+| Perfil | Usuário | Senha | Permissões |
+| --- | --- | --- | --- |
+| Professor | `professor` | `senai00` | Criar, editar, iniciar e excluir viagens; atualizar status e localização/GPS do ônibus; gerenciar equipe de professores; postar e remover fotos |
+| Aluno / Pais | `usuario1` | `senai00` | Visualizar cronograma, fotos, equipe de professores e acompanhar a localização do ônibus após o professor iniciar a viagem |
+
+- Novos usuários (alunos e responsáveis) podem se cadastrar em `/register` (senha mínima de 8 caracteres).
+- A autenticação e a sessão ativa por aba são gerenciadas localmente no navegador (`sessionStorage` em `sae:auth:v2` e contas cadastradas em `localStorage` em `sae:accounts:v1`), protegendo todas as rotas internas da aplicação.
+
+## Funcionalidades
+
+- **Painel inicial (`/home`):** exibe o resumo das viagens cadastradas, cards de acesso às seções (bloqueados por `TripRequiredGate` até que exista pelo menos uma viagem), consulta rápida da localização atual quando uma viagem já foi iniciada e prévia das fotos recentes.
+- **Configurar Viagens / Cronograma (`/data-horarios`):** criação, edição, início e exclusão de viagens; validação de datas (incluindo anos bissextos) e horários (`chegada > saída`); botão **Preencher automaticamente** com 3 presets de excursões SESI; seleção por foto de um ou ambos os professores (**Ricardo** e **André**); busca sem distinção de acentos por título ou destino; filtro por período (`Todas as viagens`, `A partir de hoje`, `Datas passadas`) e exportação do cronograma em JSON.
+- **Localização do Ônibus (`/locomocoes`):** bloqueada para alunos e responsáveis até o professor iniciar a viagem (HTTP `423 Locked`); exibe a origem oficial no **SESI Cerquilho - SP** (Rua Antônio Modanez, 111 - Residencial São Francisco, CEP 18527-372), status do trajeto (`planned`, `boarding`, `transit`, `arrived`, `returning`, `finished`), coordenadas e link **Abrir no Google Maps**. Professores podem iniciar a viagem, usar preenchimento automático, aplicar a origem SESI Cerquilho, capturar o GPS do dispositivo (`navigator.geolocation`) ou informar coordenadas manualmente.
+- **Fotos (`/fotos`):** envio de uma ou múltiplas imagens pelo professor com redimensionamento e compressão automática em JPEG no navegador (`<canvas>`), legenda de até 140 caracteres, filtro por viagem, ampliação em modal `<dialog>` e remoção (armazenadas em `localStorage` em `sae:photos:v1` e removidas automaticamente quando a viagem vinculada é excluída).
+- **Professores (`/professores`):** exibe os perfis e fotos reais dos professores **Ricardo** e **André**, a equipe vinculada a cada viagem e o gerenciamento de membros adicionais por viagem (em `localStorage`, chave `sae:teachers:v1`).
+
+## Endpoints da API (`/api/*`)
+
+As rotas abaixo estão implementadas tanto no Cloudflare Worker (`frontend/worker.js`) quanto no backend Laravel (`backend/routes/api.php`):
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/api/location/sesi-cerquilho` | Retorna endereço e coordenadas oficiais do SESI Cerquilho - SP (CE 428) |
+| `GET` | `/api/trips` | Lista todas as viagens ordenadas por data, horário de saída e título |
+| `POST` | `/api/trips` | Cria uma nova viagem com localização inicial ancorada no SESI Cerquilho - SP |
+| `PATCH` | `/api/trips/{id}` | Atualiza os dados e horários de uma viagem existente |
+| `DELETE` | `/api/trips/{id}` | Remove uma viagem |
+| `POST` | `/api/trips/{id}/start` | Inicia a viagem (status `transit`) e publica a origem no SESI Cerquilho - SP |
+| `GET` | `/api/trips/{id}/location` | Retorna a localização atual da viagem iniciada (ou HTTP `423` se ainda não iniciada) |
+| `PATCH` | `/api/trips/{id}/location` | Atualiza status, identificação do ônibus, referência, endereço, coordenadas e progresso |
+
+## Estrutura do projeto
+
+```text
+ProjetoViagemSAE/
+├── .github/workflows/ci.yml              # Pipeline de validação (frontend e backend)
+├── frontend/
+│   ├── public/images/                    # Imagens do SESI e fotos dos professores
+│   ├── src/
+│   │   ├── components/                   # Icon, SiteShell e TripRequiredGate
+│   │   ├── lib/                          # api, auth, photos, teachers, trips e usePortalData
+│   │   └── pages/                        # Login, Register, Home, Schedule, Transports, Photos, Teachers
+│   ├── tests/                            # Testes unitários e de integração (node --test)
+│   ├── vite.config.js                    # Proxy de /api para http://127.0.0.1:8000
+│   ├── worker.js                         # Cloudflare Worker + Durable Object TripStore
+│   └── wrangler.jsonc                    # Configuração do Worker e assets SPA
+└── backend/
+    ├── app/
+    │   ├── Http/Controllers/Api/TripController.php
+    │   ├── Models/Trip.php
+    │   └── Services/SesiLocationService.php
+    ├── database/migrations/
+    ├── routes/api.php
+    └── tests/Feature/TripLocationApiTest.php
+```
+
+## Como executar localmente
+
+### Pré-requisitos
+
+- **Frontend / Worker:** Node.js `>= 22.12.0` (recomendado Node.js 24) e npm.
+- **Backend Laravel (opcional):** PHP `8.2+`, Composer e extensão SQLite (`pdo_sqlite`) habilitada.
+
+### 1. Frontend (Vite)
 
 ```bash
 cd frontend
@@ -12,19 +84,9 @@ npm ci
 npm run dev
 ```
 
-Abra o endereço exibido pelo Vite. A página inicial abre diretamente. O menu permite acessar cronograma, preparação, autorizações e as demais seções. A tela de login continua disponível, sem autenticação real.
+Quando usado com o backend Laravel local, o arquivo `frontend/vite.config.js` redireciona automaticamente as requisições `/api` para `http://127.0.0.1:8000`.
 
-```bash
-npm test
-npm run build
-npm run preview
-```
-
-O build fica em `frontend/dist/`. Ao hospedar a interface, configure o servidor para devolver `index.html` para rotas como `/home` e `/data-horarios` (fallback de SPA).
-
-## Executar o backend
-
-Requisitos: PHP 8.2+, Composer e extensão SQLite habilitada.
+### 2. Backend Laravel (opcional)
 
 ```bash
 cd backend
@@ -36,46 +98,45 @@ php artisan migrate
 php artisan serve
 ```
 
-O backend e a interface são aplicações separadas. O Laravel ainda não oferece endpoints de autenticação ou gestão de viagens para a interface. A página inicial do Laravel não é o frontend React.
+### 3. Cloudflare Workers (execução local e deploy)
 
-Para testar o esqueleto Laravel: `php artisan test` em `backend/` após a configuração acima.
+Para gerar os assets e simular o Worker + Durable Object SQLite localmente com o Wrangler:
 
-## Funcionalidades atuais
+```bash
+cd frontend
+npm ci
+npm run build
+npx wrangler dev
+```
 
-- Páginas de apresentação: painel, recursos, informações, professores, transporte e autorizações.
-- Cronograma demonstrativo: adicionar e excluir viagens, ordenar por data e horário, validar datas e persistir no navegador.
-- A exclusão solicita confirmação; uma falha de gravação mantém o formulário preenchido e a lista anterior.
-- Dados salvos inválidos geram um aviso e exibem exemplos, sem sobrescrever automaticamente o conteúdo anterior. Uma alteração salva substitui esse conteúdo.
-- Login e cadastro são formulários demonstrativos. Eles não criam contas ou sessões e não enviam os dados a uma API. A navegação é pública, sem proteção de rotas.
-- Contatos, transportes e informações do painel são exemplos, sem confirmação de disponibilidade.
+Para publicar no Cloudflare Workers:
 
-O cronograma usa `localStorage`: não sincroniza entre usuários, navegadores ou dispositivos. Limpar os dados do navegador apaga esse cronograma. Não utilizar dados pessoais reais de estudantes nesta demonstração.
+```bash
+cd frontend
+npm run deploy
+```
 
-## Qualidade e validação
+## Testes e integração contínua (CI)
 
-- `npm test`: 16 testes de regressão para o cronograma, incluindo falhas de armazenamento, conteúdo inválido, anos bissextos, ordenação, exclusão, filtros por período e persistência da lista de preparação.
-- `npm run build`: compilação de produção da interface.
-- `.github/workflows/ci.yml`: instalação, testes e build do frontend; validação do Composer e testes do Laravel no GitHub Actions.
-- A revisão foi validada localmente com os testes JavaScript e o build. PHP e Composer não estavam disponíveis no ambiente de revisão; a validação PHP fica no pipeline.
+Frontend (`frontend/`):
 
-## Próximas melhorias
+```bash
+cd frontend
+npm test      # Executa 20 testes (node --test) de cronograma, autenticação, API/fallback, fotos e professores
+npm run build # Gera o build de produção em frontend/dist/
+```
 
-1. Implementar autenticação, sessões e permissões no Laravel.
-2. Criar modelo de dados e API para viagens, turmas, responsáveis e autorizações.
-3. Integrar a interface à API e substituir a persistência local por banco de dados.
-4. Implementar envio e aprovação de autorizações e documentos.
-5. Ampliar testes de interface e revisar acessibilidade antes de uso operacional.
+Backend (`backend/`):
 
-Os arquivos do anexo estão distribuídos em `frontend/` e `backend/`. O `.gitignore` impede a inclusão de dependências, builds, arquivos de ambiente e bancos SQLite locais.
+```bash
+cd backend
+php artisan test
+```
 
-## Versão hospedada e melhorias recentes
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa automaticamente em `push` e `pull_request` os jobs `frontend` (Node 24: `npm ci`, `npm test`, `npm run build`) e `backend` (PHP 8.2: `composer validate --strict`, instalação de dependências, migração/configuração e `php artisan test`).
 
-[Abrir SESI Aventura Educativa](https://projeto-viagem-sae.artfulelm64.chatgpt.site) — acesso privado pela conta proprietária.
+## Observações de uso e armazenamento
 
-- Identidade visual com ilustrações exclusivas em estilo de diorama de papel recortado: mundo que nasce de um caderno, laboratório de natureza e mochila de possibilidades.
-- Menu compartilhado, indicação da seção ativa, navegação por teclado e adaptação para celular.
-- Página inicial com resumo das próximas viagens e lista de preparação.
-- Cronograma com busca sem distinção de acentos, filtros por período e download de cópia JSON.
-- Lista de preparação com progresso salvo apenas no navegador.
-
-As ilustrações ficam em `frontend/public/images/`. As fotografias anteriores estão preservadas e não são usadas na interface atual. A hospedagem serve somente o frontend estático; o Laravel permanece como estrutura inicial separada.
+- **Viagens e localização do ônibus:** sincronizadas via API (Durable Object SQLite no Worker ou SQLite no Laravel) com fallback local no navegador quando offline.
+- **Contas cadastradas, sessão, fotos e equipe adicional:** armazenados apenas no navegador (`sessionStorage` e `localStorage`), não sendo compartilhados entre diferentes dispositivos ou navegadores.
+- Por se tratar de uma aplicação demonstrativa com credenciais pré-configuradas, não utilize dados pessoais sensíveis de alunos ou responsáveis neste ambiente.
